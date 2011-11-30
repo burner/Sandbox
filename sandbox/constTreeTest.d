@@ -1,4 +1,4 @@
-import std.stdio;
+import hurt.io.stdio;
 
 class Node {
 	int value;
@@ -88,7 +88,7 @@ void main() {
 	ConstIterator it = r.begin();
 	while(it.isValid()) {
 		const(Node) n = it.getValue();
-		writeln(n.getValue());
+		println(n.getValue());
 		it.increment();
 	}
 }
