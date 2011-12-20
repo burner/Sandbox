@@ -3,6 +3,8 @@ import glfw;
 import std.stdio;
 import glfuncs;
 import gltypes;
+import std.stdio;
+import std.conv;
 
 float rotate_y = 0,
       rotate_z = 0;
@@ -24,6 +26,8 @@ int main() {
 		writeln("glfwOoenWindow failed");
 		return 0;
 	}
+	const(char)* ver = glGetString(GL_VERSION);
+	writeln(to!string(ver));
 	glfwSetWindowTitle("The GLFW Window");
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
