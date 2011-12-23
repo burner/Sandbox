@@ -25,9 +25,9 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 */
-module glfuncs;
+module opengl.glfuncs;
 
-import gltypes;
+import opengl.gltypes;
 
 extern(C) {
 void glClearIndex(GLfloat c);

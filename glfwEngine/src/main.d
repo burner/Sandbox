@@ -1,11 +1,10 @@
-import glfw;
-
+import opengl.glfuncs;
+import opengl.glfw;
+import opengl.gltypes;
+import std.conv;
 import std.stdio;
-import glfuncs;
-import gltypes;
 import std.stdio;
 import std.string;
-import std.conv;
 
 float rotate_y = 0,
 		rotate_z = 0;

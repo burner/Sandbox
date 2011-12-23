@@ -25,7 +25,7 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 */
-module gltypes;
+module opengl.gltypes;
 
 /*
 The ExtensionState enum is used internally by the extension loader and externally
