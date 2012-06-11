@@ -9,5 +9,4 @@ src/main.d
 ''')
 
 env = Environment()
-env['LINKFLAGS'] = '-m64 -lpthread -lphobos2 -lGL -lglfw -lrt'
-env.Program("glfwtest", src, TARGET_ARCH='x86_64', DFLAGS = Split("-unittest -gc -g -m64"))
+env.Program("glfwtest", src, TARGET_ARCH='x86_64', DFLAGS = Split("-m64 -unittest -gc -g"), LIBS=["pthread", "rt", "phobos2", "GL", "glfw"])
