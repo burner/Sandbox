@@ -9,4 +9,4 @@ src/main.d
 ''')
 
 env = Environment()
-env.Program("glfwtest", src, TARGET_ARCH='x86_64', DFLAGS = Split("-m64 -unittest -gc -g"), LIBS=["pthread", "rt", "phobos2", "GL", "glfw"])
+env.Program("glfwtest", src, DFLAGS = Split("-unittest -gc -g"), LIBS=["pthread", "rt", "phobos2", "GL", "glfw"])
