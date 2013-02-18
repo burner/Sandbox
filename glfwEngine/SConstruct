@@ -9,4 +9,4 @@ src/main.d
 ''')
 
 env = Environment()
-env.Program("glfwtest", src, DFLAGS = Split("-unittest -gc -g"), LIBS=["pthread", "rt", "phobos2", "GL", "glfw"])
+env.Program("dngine", src, DFLAGS = Split("-unittest -gc -g -Igl3n/import"), LIBPATH="gl3n/lib/", LIBS=["pthread", "rt", "phobos2", "GL", "glfw", "gl3n-dmd"])
