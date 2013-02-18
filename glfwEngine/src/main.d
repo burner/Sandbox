@@ -15,7 +15,6 @@ int main() {
 		writeln("glfwInit failed");
 		return 0;
 	}
-	writeln("glfwInit worked");
 
 	int window_width = 800,
 			window_height = 600;
@@ -26,6 +25,11 @@ int main() {
 		writeln("glfwOoenWindow failed");
 		return 0;
 	}
+
+	glfwOpenWindowHint(GLFW_FSAA_SAMPLES, 4);
+	glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 2);
+	glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2);
+	glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwGetWindowSize(&window_width, &window_height);
 	glfwSetWindowSize(window_width, window_height);
 	const(char)* ver = glGetString(GL_VERSION);
