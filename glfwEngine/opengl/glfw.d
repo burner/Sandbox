@@ -22,8 +22,9 @@ void glfwRestoreWindow();
 void glfwSwapBuffers();
 void glfwSwapInterval( int interval );
 int  glfwGetWindowParam( int param );
-/*void glfwSetWindowSizeCallback( GLFWwindowsizefun cbfun );
-void glfwSetWindowCloseCallback( GLFWwindowclosefun cbfun );
+alias extern(C) void function(int,int) WindowSizeCallback;
+void glfwSetWindowSizeCallback(WindowSizeCallback cb);
+/*void glfwSetWindowCloseCallback( GLFWwindowclosefun cbfun );
 void glfwSetWindowRefreshCallback( GLFWwindowrefreshfun cbfun );*/
 
 /* Video mode functions */

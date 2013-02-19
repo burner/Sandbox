@@ -5,11 +5,24 @@ opengl/glfw.d
 ''')
 
 src += Split('''
+gl3n/gl3n/aabb.d
+gl3n/gl3n/frustum.d
+gl3n/gl3n/interpolate.d
+gl3n/gl3n/linalg.d
+gl3n/gl3n/math.d
+gl3n/gl3n/plane.d
+gl3n/gl3n/util.d
+gl3n/gl3n/color/hsv.d
+gl3n/gl3n/ext/matrixstack.d
+''')
+
+src += Split('''
 src/main.d
 src/slog.d
 src/window.d
 src/shader.d
+src/camera.d
 ''')
 
 env = Environment()
-env.Program("dngine", src, DFLAGS = Split("-unittest -gc -g -Igl3n/import -Isrc"), LIBPATH="gl3n/lib/", LIBS=["pthread", "rt", "phobos2", "GL", "glfw", "gl3n-dmd"])
+env.Program("dngine", src, DFLAGS = Split("-unittest -gc -g -Igl3n/ -Isrc"), LIBS=["pthread", "rt", "phobos2", "GL", "glfw", "m"])

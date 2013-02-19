@@ -1,5 +1,5 @@
 all:
-	scons
+	scons -j4
 
 getlibs:
 	git clone https://github.com/Dav1dde/gl3n.git

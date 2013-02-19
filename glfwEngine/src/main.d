@@ -1,3 +1,5 @@
+import core.memory;
+
 import std.conv;
 import std.stdio;
 import std.stdio;
@@ -7,22 +9,35 @@ import opengl.glfuncs;
 import opengl.glfw;
 import opengl.gltypes;
 
+import gl3n.linalg;
+
 import window;
 import slog;
 import shader;
+import camera;
 
 Window win;
+Camera cam;
 
 GLuint s;
 GLuint vertexbuffer;
 
+extern(C) void windowResizeCallback(int width, int height) {
+	log("window resize to width %d and height %d", width, height);
+	win.setWidth(width);	
+	win.setHeight(height);	
+}
+
 int main() {
+	GC.disable();
 	if(glfwInit() != 1) {
 		log("glfwInit failed");
 		return 0;
 	}
+	glfwSetWindowSizeCallback(&windowResizeCallback);
 
 	win.init();
+	cam.init();
 
 	s = loadShader("shader/SimpleVertexShader.vertexshader", 
 		"shader/SimpleFragmentShader.fragmentshader");
@@ -46,6 +61,21 @@ void mainLoop() {
 	while(true) {
 		win.updateWindowFrameTitle();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		if(glfwGetKey('Q') == GLFW_PRESS) {
+			log();
+			cam.rotateAroundAxis(2, -2.0);
+		}
+
+		mat4 identi = mat4(0);
+		identi.make_identity();
+		mat4 camM = cam.getViewMatrix();
+		mat4 proM = win.getProjMatrix();
+		//log("%s", identi);
+		//log("%s", camM);
+		//log("%s", proM);
+		mat4 mvp = identi * cam.getViewMatrix() * win.getProjMatrix();
+		log("%s", mvp.toString());
 
 		glUseProgram(s);
 
@@ -71,5 +101,7 @@ void mainLoop() {
 		}
  
 		glfwSwapBuffers();
+		//glfwPollEvents();
+		GC.collect();
 	}
 }
