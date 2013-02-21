@@ -5,9 +5,10 @@ import std.stdio;
 import std.stdio;
 import std.string;
 
-import opengl.glfuncs;
+import opengl.gl;
+//import opengl.glfuncs;
 import opengl.glfw;
-import opengl.gltypes;
+//import opengl.gltypes;
 
 import gl3n.linalg;
 
@@ -15,12 +16,14 @@ import window;
 import slog;
 import shader;
 import camera;
+import objloader;
 
 Window win;
 Camera cam;
 
 GLuint s;
 GLuint vertexbuffer;
+Mesh m;		
 
 extern(C) void windowResizeCallback(int width, int height) {
 	log("window resize to width %d and height %d", width, height);
@@ -36,13 +39,15 @@ int main() {
 	}
 	glfwSetWindowSizeCallback(&windowResizeCallback);
 
+	m.loadObjFile("models/box.obj");
+
 	win.init();
 	cam.init();
 
-	s = loadShader("shader/SimpleVertexShader.vertexshader", 
-		"shader/SimpleFragmentShader.fragmentshader");
+	s = loadShader("shader/TransformVertexShader.vertexshader", 
+		"shader/TextureFragmentShader.fragmentshader");
 
-	static const GLfloat[9] g_vertex_buffer_data = [ 
+	/*static const GLfloat[9] g_vertex_buffer_data = [ 
 		-1.0f, -1.0f, 0.0f,
 		 1.0f, -1.0f, 0.0f,
 		 0.0f,  1.0f, 0.0f,
@@ -50,7 +55,8 @@ int main() {
 
 	glGenBuffers(1, &vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, g_vertex_buffer_data.sizeof, g_vertex_buffer_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, g_vertex_buffer_data.sizeof,
+	g_vertex_buffer_data, GL_STATIC_DRAW);*/
 
 	mainLoop();
 	glfwTerminate();
@@ -59,6 +65,7 @@ int main() {
 
 void mainLoop() {
 	while(true) {
+		log();
 		win.updateWindowFrameTitle();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -67,19 +74,22 @@ void mainLoop() {
 			cam.rotateAroundAxis(2, -2.0);
 		}
 
-		mat4 identi = mat4(0);
-		identi.make_identity();
+		mat4 model = mat4.look_at(vec3(0,0,10), vec3(0,0,-1), vec3(0,1,0));
 		mat4 camM = cam.getViewMatrix();
 		mat4 proM = win.getProjMatrix();
+		log();
 		//log("%s", identi);
 		//log("%s", camM);
 		//log("%s", proM);
-		mat4 mvp = identi * cam.getViewMatrix() * win.getProjMatrix();
+		mat4 mvp = win.getProjMatrix() * cam.getViewMatrix() * model;
+		glUseProgram(s);
+		log();
+		m.render(mvp, s);
+		log();
 		log("%s", mvp.toString());
 
-		glUseProgram(s);
 
-		// 1rst attribute buffer : vertices
+		/*// 1rst attribute buffer : vertices
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glVertexAttribPointer(
@@ -94,7 +104,7 @@ void mainLoop() {
 		// Draw the triangle !
 		glDrawArrays(GL_TRIANGLES, 0, 3); // From index 0 to 3 -> 1 triangle
 
-		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(0);*/
 
 		if(glfwGetKey(GLFW_KEY_ESC) == GLFW_PRESS) {
 			break;

@@ -4,9 +4,10 @@ import std.conv;
 import std.string;
 import std.exception;
 
-import opengl.glfuncs;
 import opengl.glfw;
-import opengl.gltypes;
+//import opengl.glfuncs;
+//import opengl.gltypes;
+import opengl.gl;
 import slog;
 
 import gl3n.linalg;
@@ -46,7 +47,7 @@ struct Window {
 		glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwSwapInterval(1);
 
-		const(char)* ver = glGetString(GL_VERSION);
+		const(char)* ver = cast(const(char)*)glGetString(GL_VERSION);
 		slog.log("%s", to!string(ver));
  		oldTime = glfwGetTime();
 	}

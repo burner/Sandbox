@@ -2,8 +2,9 @@ import std.file;
 import std.string;
 import std.stdio;
 
-import opengl.glfuncs;
-import opengl.gltypes;
+//import opengl.glfuncs;
+//import opengl.gltypes;
+import opengl.gl;
 
 import slog;
 
@@ -26,7 +27,7 @@ GLuint loadShader(string vertex_file_path, string fragment_file_path) {
 	// Compile Vertex Shader
 	log("Compiling shader : %s", vertex_file_path);
 	immutable(char)* vertexSource = toStringz(VertexShaderCode);
-	glShaderSource(VertexShaderID, 1, cast(const(char**))(&vertexSource), n);
+	glShaderSource(VertexShaderID, 1, cast(const(char)**)(&vertexSource), n);
 	glCompileShader(VertexShaderID);
 
 	// Check Vertex Shader
@@ -48,7 +49,7 @@ GLuint loadShader(string vertex_file_path, string fragment_file_path) {
 	// Compile Fragment Shader
 	log("Compiling shader : %s", fragment_file_path);
 	immutable(char)* fragmentSource = toStringz(FragmentShaderCode);
-	glShaderSource(FragmentShaderID, 1, cast(const(char**))(&fragmentSource), null);
+	glShaderSource(FragmentShaderID, 1, cast(const(char)**)(&fragmentSource), null);
 	glCompileShader(FragmentShaderID);
 
 	// Check Fragment Shader

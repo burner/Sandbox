@@ -1,8 +1,10 @@
 src = Split('''
-opengl/glfuncs.d
-opengl/gltypes.d
+opengl/gl.d
 opengl/glfw.d
 ''')
+
+#opengl/glfuncs.d
+#opengl/gltypes.d
 
 src += Split('''
 gl3n/gl3n/aabb.d
@@ -22,7 +24,8 @@ src/slog.d
 src/window.d
 src/shader.d
 src/camera.d
+src/objloader.d
 ''')
 
 env = Environment()
-env.Program("dngine", src, DFLAGS = Split("-unittest -gc -g -Igl3n/ -Isrc"), LIBS=["pthread", "rt", "phobos2", "GL", "glfw", "m"])
+env.Program("dngine", src, DFLAGS = Split("-unittest -gc -g -Igl3n/ -Isrc -gc"), LIBS=["pthread", "rt", "phobos2", "GL", "glfw", "m"])
