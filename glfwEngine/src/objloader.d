@@ -59,10 +59,10 @@ struct Mesh {
 				0,		// stride
 				null  // array buffer offset
 		);
-		log("%d", cast(GLint)this.numTriangle);
+		log("%d", cast(GLint)this.numTriangle/9);
 
 		// Draw the triangle !
-		glDrawArrays(GL_TRIANGLES, 0, cast(GLint)this.numTriangle);
+		glDrawArrays(GL_TRIANGLES, 0, cast(GLint)this.numTriangle/9);
 		log();
 
 		glDisableVertexAttribArray(0);
