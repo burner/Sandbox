@@ -83,5 +83,7 @@ GLuint loadShader(string vertex_file_path, string fragment_file_path) {
 	glDeleteShader(VertexShaderID);
 	glDeleteShader(FragmentShaderID);
 
+	log("program build succesfully");
+
 	return ProgramID;
 }
