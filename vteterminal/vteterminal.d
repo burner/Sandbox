@@ -1,9 +1,84 @@
 module vteterminal;
 
 import gtkc.glibtypes;
+import gtk.Widget;
+import gtkc.gtktypes;
+
+import gtkc.gtk;
+import glib.ConstructionException;
+import gobject.ObjectG;
+
+import gobject.Signals;
+import gtkc.gdktypes;
+
+import glib.Str;
+import gtk.Menu;
+import pango.PgAttributeList;
+import pango.PgLayout;
+
+import gtk.Misc;
+
+enum VtePtyFlags {
+  VTE_PTY_NO_LASTLOG  = 1 << 0,
+  VTE_PTY_NO_UTMP     = 1 << 1,
+  VTE_PTY_NO_WTMP     = 1 << 2,
+  VTE_PTY_NO_HELPER   = 1 << 3,
+  VTE_PTY_NO_FALLBACK = 1 << 4,
+  VTE_PTY_DEFAULT     = 0
+}
+
+enum VtePtyError {
+  VTE_PTY_ERROR_PTY_HELPER_FAILED = 0,
+  VTE_PTY_ERROR_PTY98_FAILED
+}
 
 
-struct _VteTerminal {
+enum VteTerminalCursorBlinkMode {
+        VTE_CURSOR_BLINK_SYSTEM,
+        VTE_CURSOR_BLINK_ON,
+        VTE_CURSOR_BLINK_OFF
+}
+
+/**
+ * VteTerminalCursorShape:
+ * @VTE_CURSOR_SHAPE_BLOCK: Draw a block cursor.  This is the default.
+ * @VTE_CURSOR_SHAPE_IBEAM: Draw a vertical bar on the left side of character.
+ * This is similar to the default cursor for other GTK+ widgets.
+ * @VTE_CURSOR_SHAPE_UNDERLINE: Draw a horizontal bar below the character.
+ *
+ * An enumerated type which can be used to indicate what should the terminal
+ * draw at the cursor position.
+ */
+enum VteTerminalCursorShape {
+        VTE_CURSOR_SHAPE_BLOCK,
+        VTE_CURSOR_SHAPE_IBEAM,
+        VTE_CURSOR_SHAPE_UNDERLINE
+}
+
+enum VteTerminalWriteFlags {
+  VTE_TERMINAL_WRITE_DEFAULT = 0
+}
+
+
+enum VteTerminalAntiAlias {
+	VTE_ANTI_ALIAS_USE_DEFAULT,
+	VTE_ANTI_ALIAS_FORCE_ENABLE,
+	VTE_ANTI_ALIAS_FORCE_DISABLE
+}
+
+struct VtePty {}
+
+enum VteTerminalEraseBinding {
+	VTE_ERASE_AUTO,
+	VTE_ERASE_ASCII_BACKSPACE,
+	VTE_ERASE_ASCII_DELETE,
+	VTE_ERASE_DELETE_SEQUENCE,
+	VTE_ERASE_TTY
+}
+
+alias gboolean function(VteTerminal *terminal, glong column, glong row, gpointer data) VteSelectionFunc;
+
+struct VteTerminal {
 	GtkWidget widget;
         /*< private >*/
 	GtkAdjustment *adjustment;	/* Scrolling adjustment. */
@@ -18,14 +93,13 @@ struct _VteTerminal {
 	char *icon_title;
 
 	/*< private >*/
-	VteTerminalPrivate *pvt;
+	void *pvt;
 }
 
-bool function(VteTerminal *terminal, glong column, glong row, gpointer data) VteSelectionFunc;
-GtkWidget * vte_terminal_new (void);
+extern(C) {
+GtkWidget * vte_terminal_new ();
 
 void vte_terminal_im_append_menuitems (VteTerminal *terminal, GtkMenuShell *menushell);
-
 void vte_terminal_feed (VteTerminal *terminal, const char *data, glong length);
 void vte_terminal_feed_child (VteTerminal *terminal, const char *text, glong length);
 void vte_terminal_feed_child_binary (VteTerminal *terminal, const char *data, glong length);
@@ -114,7 +188,7 @@ bool vte_terminal_search_get_wrap_around (VteTerminal *terminal);
 void vte_terminal_search_set_gregex (VteTerminal *terminal, GRegex *regex);
 void vte_terminal_search_set_wrap_around (VteTerminal *terminal, bool wrap_around);
 
-char * vte_get_user_shell (void);
+char * vte_get_user_shell ();
 
 pid_t vte_terminal_fork_command (VteTerminal *terminal, const char *command, char **argv, char **envv, const char *working_directory, bool lastlog, bool utmp, bool wtmp);
 bool vte_terminal_fork_command_full (VteTerminal *terminal, VtePtyFlags pty_flags, const char *working_directory, char **argv, char **envv, GSpawnFlags spawn_flags, GSpawnChildSetupFunc child_setup, gpointer child_setup_data, GPid *child_pid, GError **error);
@@ -138,3 +212,35 @@ glong vte_terminal_get_row_count (VteTerminal *terminal);
 const char * vte_terminal_get_window_title (VteTerminal *terminal);
 const char * vte_terminal_get_current_directory_uri (VteTerminal *terminal);
 const char * vte_terminal_get_current_file_uri (VteTerminal *terminal);
+}
+
+public class Terminal : Misc {
+	protected VteTerminal* vteTerminal;
+	
+	public VteTerminal* getLabelStruct()
+	{
+		return vteTerminal;
+	}
+	
+	
+	/** the main Gtk struct as a void* */
+	protected override void* getStruct()
+	{
+		return cast(void*)vteTerminal;
+	}
+	
+	/**
+	 * Sets our main struct and passes it to the parent class
+	 */
+	public this (VteTerminal* vteTerminal)
+	{
+		super(cast(GtkMisc*)vteTerminal);
+		this.vteTerminal = vteTerminal;
+	}
+	
+	protected override void setStruct(GObject* obj)
+	{
+		super.setStruct(obj);
+		vteTerminal = cast(VteTerminal*)obj;
+	}
+}
