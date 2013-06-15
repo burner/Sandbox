@@ -1,19 +1,29 @@
 module calc;
 
 import std.ascii;
+import std.stdio;
+import std.conv;
+import std.math;
+import std.traits;
 
 struct calc(T) {
 	string str;
 	size_t pos;
 	T[string] var;
 
-	calc(string s) : str(s), pos(0) {}
-	calc(string s, T[string] v) : str(s), pos(0),
-		var(v) {}
+	this(string s) { 
+		str = s; 
+		pos = 0u;
+	}
+
+	this(string s, T[string] v) { 
+		str = s; 
+		pos = 0;
+		var = v;
+	}
 
 	char peek() {
-		//return *expressionToParse;
-		if(pos >= str.size()) {
+		if(pos >= str.length) {
 			return '\0';
 		}
 		return str[pos];
@@ -34,12 +44,11 @@ struct calc(T) {
 	}
 	
 	char get() {
-		//return *expressionToParse++;
-		if(pos >= str.size()) {
-			throw string("Out of bound");
+		if(pos >= str.length) {
+			throw new Exception("Out of bound");
 		}
 		char ret = str[pos++];
-		while(isWhite(str[pos])) {
+		while(pos < str.length && isWhite(str[pos])) {
 			pos++;
 		}
 		return ret;
@@ -49,14 +58,11 @@ struct calc(T) {
 		while(isWhite(peek())) {
 			get();
 		}
-		stringstream tmp;
-		//int result = get() - '0';
-		tmp<<get();
+		size_t startPos = pos;
 		while ((peek() >= '0' && peek() <= '9') || peek() == '.') {
-			tmp<<get();
+			get();
 		}
-		double ret;
-		tmp>>ret;
+		double ret = to!double(str[startPos .. pos]);
 		return ret;
 	}
 	
@@ -77,178 +83,123 @@ struct calc(T) {
 		} else if(peek() == '+') {
 			get();
 			return expression();
-		} else if(peek() >= 'a' && peek() <= 'z') {
-			stringstream tmp;
-			while(peek() >= 'a' && peek() <= 'z') {
-				tmp<<get();
-			}
-			/*if(peek() == '(') {
+		} else if((peek() >= 'a' && peek() <= 'z') || 
+				(peek() >= 'A' && peek <= 'Z')) {
+			size_t startPos = pos;
+			while((peek() >= 'a' && peek() <= 'z') || 
+					(peek() >= 'A' && peek <= 'Z')) {
 				get();
-			}*/	
-			string func = tmp.str();
+			}
+
+			string func = str[startPos .. pos - (peek() == '\0' ? 0 : 1)];
+			//writefln("\"%s\"", func);
 			if(func == "abs") {
 				get();
 				double ret = fabs(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "exp") {
 				get();
 				double ret = exp(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "exp2") {
 				get();
 				double ret = exp2(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "log") {
 				get();
 				double ret = log(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "log10") {
 				get();
 				double ret = log10(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "log2") {
 				get();
 				double ret = log10(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "sqrt") {
 				get();
 				double ret = sqrt(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
-			} else if(func == "mod") {
-				get();
-				double num1 = expression();
-				if(get() != ',') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				double num2 = expression();
-				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				return fmod(num1, num2);
-			} else if(func == "srand") {
-				get();
-				double num1 = expression();
-				if(get() != ',') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				double num2 = expression();
-				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				std::default_random_engine
-					generator(std::chrono::system_clock::now().time_since_epoch().count());
-				std::uniform_real_distribution<double> distribution(num1,num2);
-				return distribution(generator);
-			} else if(func == "rand") {
-				get();
-				double num1 = expression();
-				if(get() != ',') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				double num2 = expression();
-				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				std::default_random_engine generator;
-				std::uniform_real_distribution<double> distribution(num1,num2);
-				return distribution(generator);
 			} else if(func == "pow") {
 				get();
 				double num1 = expression();
 				if(get() != ',') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				double num2 = expression();
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return pow(num1, num2);
 			} else if(func == "sin") {
 				get();
 				double ret = sin(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "cos") {
 				get();
 				double ret = cos(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "tan") {
 				get();
 				double ret = tan(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "asin") {
 				get();
 				double ret = asin(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "acos") {
 				get();
 				double ret = acos(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "atan") {
 				get();
 				double ret = atan(expression());
 				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
+					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
-			} else if(func == "clamp") {
-				get();
-				double num1 = expression();
-				if(get() != ',') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				double num2 = expression();
-				if(get() != ',') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				double num3 = expression();
-				if(get() != ')') {
-					std::cout<<__LINE__<<std::endl;
-				}
-				return clamp(num1,num2,num3);
 			} else {
-				T[string]::iterator it = var.find(func);
-				if(it != var.end()) {
-					return it->second;
-				}
+				return var[func];
 			}
 		}
-		return std::numeric_limits<double>::signaling_NaN(); // error
+		return T.init; // error
 	}
 	
 	double term() {
@@ -256,11 +207,14 @@ struct calc(T) {
 			get();
 		}
 		double result = factor();
-		while (peek() == '*' || peek() == '/')
-			if (get() == '*')
+		//writeln(__LINE__, " ", result);
+		while (peek() == '*' || peek() == '/') {
+			if(get() == '*') {
 				result *= factor();
-			else
+			} else {
 				result /= factor();
+			}
+		}
 		return result;
 	}
 	
@@ -269,65 +223,85 @@ struct calc(T) {
 			get();
 		}
 		double result = term();
-		while (peek() == '+' || peek() == '-')
-			if (get() == '+')
+		while(peek() == '+' || peek() == '-') {
+			if(get() == '+') {
 				result += term();
-			else
+			} else {
 				result -= term();
+			}
+		}
 		return result;
 	}
-};
+}
 
-/*UNITTEST(calcTest) {
-	calc c("5.3+5*2.5");
-	AS_EQ(c.expression(), 17.8);
-	//calc c2("5.3+5 *sin(2.5)");
-	//AS_EQ(c2.expression(), 8.29236);
+unittest {
+	auto c = calc!(double)("5.3+5*2.5");
+	assert(c.expression() == 17.8);
 	{
-		T[string] vars;
+		double[string] vars;
 		vars["hello"] = 1.234;
-		calc c3("hello", vars);
-		AS_EQ(c3.expression(), 1.234);
+		auto c3 = calc!double("hello", vars);
+		assert(c3.expression() == 1.234);
 	}
 	{
-		T[string] vars;
+		double[string] vars;
 		vars["hello"] = 1.234;
-		calc c3("hello * 2.0", vars);
-		AS_EQ(c3.expression(), 2.468);
+		auto c3 = calc!double("hello * 2.0", vars);
+		assert(c3.expression() == 2.468);
 	}
 	{
-		T[string] vars;
+		double[string] vars;
 		vars["hello"] = 1.234;
-		calc c3("clamp(1.0, hello * 0.5, 4.0)", vars);
-		AS_EQ(c3.expression(), 1.0);
+		auto c3 = calc!double("clamp(1.0, hello * 0.5, 4.0)", vars);
+		double rs = c3.expression();
+		assert(rs == 1.0, to!string(rs));
 	}
 	{
-		T[string] vars;
+		double[string] vars;
 		vars["hello"] = 1.234;
 		vars["foo"] = 1337;
-		calc c3("foo * clamp(1.0, hello * 2.0, 4.0)", vars);
-		AS_EQ(c3.expression(), 3299.71600);
+		calc!double c3 = 
+			calc!double("foo * clamp(1.0, hello * 2.0, 4.0)", vars);
+		double rs = c3.expression();
+		assert(rs == 3299.71600, to!string(rs));
 	}
 	for(int i = 0; i < 10; i++) {
-		double rs = calculate("rand(0.0, 1.0)");
-		AS_T(rs >= 0.0 && rs <= 1.0);
+		double rs = calculate!double("rand(0.0, 1.0)");
+		assert(rs >= 0.0 && rs <= 1.0, to!string(rs));
 	}
 	for(int i = 0; i < 10; i++) {
-		double rs = calculate("srand(0.0, 1.0)");
-		AS_T(rs >= 0.0 && rs <= 1.0);
+		double rs = calculate!double("srand(0.0, 1.0)");
+		assert(rs >= 0.0 && rs <= 1.0, to!string(rs));
 	}
 	for(int i = 0; i < 10; i++) {
-		double rs = calculate("srand(0.8, 1.0)");
-		AS_T(rs >= 0.8 && rs <= 1.0);
+		double rs = calculate!double("srand(0.8, 1.0)");
+		assert(rs >= 0.8 && rs <= 1.0, to!string(rs));
 	}
-}*/
+}
 
-double calculate(string expr) {
-	calc c(expr);
+T calculate(T = double)(string expr) {
+	T[string] map;
+	calc!(T) c = calc!(T)(expr, map);
 	return c.expression();
 }
 
-double calculate(string expr, T[string] map) {
-	calc c(expr, map);
+T calculate(T)(string expr, T[string] map) if(isNumeric!T) {
+	calc!(T) c = calc!(T)(expr, map);
 	return c.expression();
+}
+
+/*double calculate(string expr) {
+	calc c(expr);
+	return c.expression();
+}*/
+
+unittest {
+	double[string] values;
+	values["foo"] = 2.0;
+	values["bar"] = 4.0;
+	double r = calculate!double("foo * bar", values);
+	assert(r == 8.0, to!string(r));
+}
+
+void main() {
 }
