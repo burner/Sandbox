@@ -1,10 +1,43 @@
 module calc;
 
 import std.ascii;
+import std.array;
 import std.stdio;
 import std.conv;
 import std.math;
 import std.traits;
+import std.string;
+
+string constructEval(string name, ulong argc)() {
+	auto app = appender!string();
+	app.put("\tif(func == "); app.put(name); app.put(") {\n");	
+	app.put("\t\tT[argc] var;\n");
+	app.put("\t\teatWhiteSpace();\n");
+	app.put("\t\tget('(');\n");
+	app.put("\t\tfor size_t i = 0; i < argc; ++i) {\n");
+	app.put("\t\t\tvar[i] = term();\n");
+	app.put("\t\t\teatWhiteSpace();\n");
+	app.put("\t\t\ti+1 == argc ? get(')') : get(',');\n");
+	app.put("\t\t}\n");
+	app.put("\t\treturn name(");
+	for(size_t i = 0; i < argc; ++i) {
+		app.put(format("var[%u]", i));
+		app.put(i+1 == argc ? ");\n" : ",");
+	}
+	app.put("\t}\n");
+	return app.data();
+}
+
+immutable(int[string]) args = ["Foo" : 1];
+
+/*int[string][2] functions = [
+	[ "cos" : 1, "sin" : 1, "tan" : 1, "acos" : 1, "asin" : 1, "atan" : 1]
+	[];
+] ;*/
+
+unittest {
+	writeln(constructEval!("foo", 5));
+}
 
 struct calc(T) {
 	string str;
@@ -42,14 +75,27 @@ struct calc(T) {
 	bool isWhite(const char c) {
 		return c == ' ' || c == '\t' || c == '\n';
 	}
+
+	void eatWhiteSpace() {
+		while(isWhite(peek())) {
+			get();
+		}
+	}
 	
-	char get() {
+	char get(char excepted = '\0', string file = __FILE__, 
+			int line = __LINE__) {
 		if(pos >= str.length) {
 			throw new Exception("Out of bound");
 		}
 		char ret = str[pos++];
 		while(pos < str.length && isWhite(str[pos])) {
 			pos++;
+		}
+
+		if(excepted != '\0' && ret != excepted) {
+			throw new Exception(format(
+				"Excepted a '%c' but found a '%c' at position %u",
+				excepted, ret, pos), file, line);
 		}
 		return ret;
 	}
@@ -73,15 +119,15 @@ struct calc(T) {
 		if(peek() >= '0' && peek() <= '9') {
 			return number();
 		} else if(peek() == '(') {
-			get(); // '('
+			get('('); // '('
 			double result = expression();
-			get(); // ')'
+			get(')'); // ')'
 			return result;
 		} else if(peek() == '-') {
-			get();
+			get('-');
 			return -expression();
 		} else if(peek() == '+') {
-			get();
+			get('+');
 			return expression();
 		} else if((peek() >= 'a' && peek() <= 'z') || 
 				(peek() >= 'A' && peek <= 'Z')) {
@@ -94,21 +140,21 @@ struct calc(T) {
 			string func = str[startPos .. pos - (peek() == '\0' ? 0 : 1)];
 			//writefln("\"%s\"", func);
 			if(func == "abs") {
-				get();
+				get('(');
 				double ret = fabs(expression());
-				if(get() != ')') {
+				if(get(')') != ')') {
 					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "exp") {
-				get();
+				get('(');
 				double ret = exp(expression());
 				if(get() != ')') {
 					//std::cout<<__LINE__<<std::endl;
 				}
 				return ret;
 			} else if(func == "exp2") {
-				get();
+				get('(');
 				double ret = exp2(expression());
 				if(get() != ')') {
 					//std::cout<<__LINE__<<std::endl;
@@ -249,7 +295,7 @@ unittest {
 		auto c3 = calc!double("hello * 2.0", vars);
 		assert(c3.expression() == 2.468);
 	}
-	{
+	/*{
 		double[string] vars;
 		vars["hello"] = 1.234;
 		auto c3 = calc!double("clamp(1.0, hello * 0.5, 4.0)", vars);
@@ -276,7 +322,7 @@ unittest {
 	for(int i = 0; i < 10; i++) {
 		double rs = calculate!double("srand(0.8, 1.0)");
 		assert(rs >= 0.8 && rs <= 1.0, to!string(rs));
-	}
+	}*/
 }
 
 T calculate(T = double)(string expr) {
