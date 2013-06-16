@@ -8,18 +8,18 @@ import std.math;
 import std.traits;
 import std.string;
 
-string constructEval(string name, ulong argc)() {
+string constructEval(string name, ulong argc) {
 	auto app = appender!string();
 	app.put("\tif(func == "); app.put(name); app.put(") {\n");	
-	app.put("\t\tT[argc] var;\n");
+	app.put(format("\t\tT[%uu] var;\n", argc));
 	app.put("\t\teatWhiteSpace();\n");
 	app.put("\t\tget('(');\n");
-	app.put("\t\tfor size_t i = 0; i < argc; ++i) {\n");
-	app.put("\t\t\tvar[i] = term();\n");
+	app.put(format("\t\tfor(size_t i = 0; i < %u; ++i) {\n", argc));
+	app.put("\t\t\tvar[i] = expression();\n");
 	app.put("\t\t\teatWhiteSpace();\n");
-	app.put("\t\t\ti+1 == argc ? get(')') : get(',');\n");
+	app.put(format("\t\t\ti+1 == %u ? get(')') : get(',');\n", argc));
 	app.put("\t\t}\n");
-	app.put("\t\treturn name(");
+	app.put(format("\t\treturn %s(", name));
 	for(size_t i = 0; i < argc; ++i) {
 		app.put(format("var[%u]", i));
 		app.put(i+1 == argc ? ");\n" : ",");
@@ -28,16 +28,47 @@ string constructEval(string name, ulong argc)() {
 	return app.data();
 }
 
-immutable(int[string]) args = ["Foo" : 1];
+static immutable(string[][]) functions = [
+	// zero arguments
+	[],
+	// one argument
+	[ "cos", "sin", "tan", "acos", "asin", "atan", "atan2", 
+	"sinh", "cosh", "tanh", "asinh", "acosh", "atanh",
+   	"abs", "rndtonl", "sqrt", "expm1", "exp2", "expi", "frexp",
+	"ilogb", "ldexp", "log", "log10", "log1p", "log2", "logb",
+	"cbrt", "fabs", "ceil", "floor", "nearbyint", "rint", "lrint", 
+	"round", "lround", "trunc", "isNaN", "isFinite", "isNormal", 
+	"isSubnormal", "isInfinity", "signbit", "sgn", "NaN", "getNaNPayload",
+	"nextUp", "nextDown"],
 
-/*int[string][2] functions = [
-	[ "cos" : 1, "sin" : 1, "tan" : 1, "acos" : 1, "asin" : 1, "atan" : 1]
-	[];
-] ;*/
+	// two arguments
+	["fmod", "modf", "scalbn", "hypot", "remainder", "isIdentical",
+	"copysign", "nextafter", "fdim", "fmax", "fmin", "fma", "pow", "feqrel",
+	"poly", "approxEqual"],
+	
+	// three arguments
+	["remquo"],
+
+	["approxEqual"]
+];
+
+string constructAllAvailable() {
+	auto app = appender!string();
+	foreach(idx, level; functions)  {
+		foreach(name; level) {
+			app.put(constructEval(name, idx));
+		}
+	}
+	return app.data();
+}
 
 unittest {
-	writeln(constructEval!("foo", 5));
+	writeln(constructEval("foo", 5));
 }
+
+//unittest {
+	pragma(msg, constructAllAvailable());
+//}
 
 struct calc(T) {
 	string str;
@@ -138,112 +169,8 @@ struct calc(T) {
 			}
 
 			string func = str[startPos .. pos - (peek() == '\0' ? 0 : 1)];
-			//writefln("\"%s\"", func);
-			if(func == "abs") {
-				get('(');
-				double ret = fabs(expression());
-				if(get(')') != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "exp") {
-				get('(');
-				double ret = exp(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "exp2") {
-				get('(');
-				double ret = exp2(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "log") {
-				get();
-				double ret = log(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "log10") {
-				get();
-				double ret = log10(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "log2") {
-				get();
-				double ret = log10(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "sqrt") {
-				get();
-				double ret = sqrt(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "pow") {
-				get();
-				double num1 = expression();
-				if(get() != ',') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				double num2 = expression();
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return pow(num1, num2);
-			} else if(func == "sin") {
-				get();
-				double ret = sin(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "cos") {
-				get();
-				double ret = cos(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "tan") {
-				get();
-				double ret = tan(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "asin") {
-				get();
-				double ret = asin(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "acos") {
-				get();
-				double ret = acos(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else if(func == "atan") {
-				get();
-				double ret = atan(expression());
-				if(get() != ')') {
-					//std::cout<<__LINE__<<std::endl;
-				}
-				return ret;
-			} else {
-				return var[func];
-			}
+			mixin(constructAllAvailable());
+			return var[func];
 		}
 		return T.init; // error
 	}
@@ -294,6 +221,9 @@ unittest {
 		vars["hello"] = 1.234;
 		auto c3 = calc!double("hello * 2.0", vars);
 		assert(c3.expression() == 2.468);
+	}
+	{
+		assert(approxEqual(calculate!double("sqrt(4)"), 2.0));
 	}
 	/*{
 		double[string] vars;
