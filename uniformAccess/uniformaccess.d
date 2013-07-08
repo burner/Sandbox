@@ -1,0 +1,5 @@
+module uniformaccess;
+
+struct UniformAccess {
+
+}
