@@ -1,4 +1,4 @@
 all:
 #./makedb.sh
-	dmd *.d -unittest -debug -ofuniform
-	./uniform
+	dmd typeconstest.d -unittest -debug
+	./typeconstest
