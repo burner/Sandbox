@@ -94,17 +94,21 @@ string genRangeItemFillImpl(T)(string a) {
 	if(!isToExclude(a)) {
 		return 
 			"\t\tcase " ~ a ~ ":\n" ~
-			"\t\t\tstatic if(isIntegral!(" ~ T.stringof ~ "." ~ a ~ ")) {\n" ~
+			"\t\t\tstatic if(isIntegral!(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_int(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isFloatingPoint!(" ~ T.stringof ~ "." ~ a ~ ")) {\n" ~
+			"\t\t\t} else static if(isFloatingPoint!(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_DOUBLE) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_double(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isSomeString!(" ~ T.stringof ~ "." ~ a ~ ")) {\n" ~
+			"\t\t\t} else static if(isSomeString!(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_TEXT) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ " = to!string(sqlite3_column_text(stmt, i));\n" ~
+			"\t\t\t\t\tret." ~ a ~ 
+				" = to!string(sqlite3_column_text(stmt, i));\n" ~
 			"\t\t\t\t}\n" ~
 			"\t\t\t}\n";
 	}
@@ -115,17 +119,21 @@ string genRangeItemFillImpl(T, B...)(string a, B b) {
 	if(!isToExclude(a)) {
 		return 
 			"\t\tcase " ~ a ~ ":\n" ~
-			"\t\t\tstatic if(isIntegral!(" ~ T.stringof ~ "." ~ a ~ ")) {\n" ~
+			"\t\t\tstatic if(isIntegral!(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_int(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isFloatingPoint!(" ~ T.stringof ~ "." ~ a ~ ")) {\n" ~
+			"\t\t\t} else static if(isFloatingPoint!(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_DOUBLE) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_double(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isSomeString!(" ~ T.stringof ~ "." ~ a ~ ")) {\n" ~
+			"\t\t\t} else static if(isSomeString!(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_TEXT) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ " = to!string(sqlite3_column_text(stmt, i));\n" ~
+			"\t\t\t\t\tret." ~ a ~ 
+				" = to!string(sqlite3_column_text(stmt, i));\n" ~
 			"\t\t\t\t}\n" ~
 			"\t\t\t}\n" ~ genRangeItemFillImpl!(T)(b);
 	}
