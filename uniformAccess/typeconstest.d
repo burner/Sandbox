@@ -73,6 +73,10 @@ struct MyStruct2 {
 	mixin(genProperties!T2);
 }
 
+class MyClass {
+	mixin(genProperties!T1);
+}
+
 unittest {
 	MyStruct ms;
 	ms.FooBar = 1337;
@@ -93,23 +97,23 @@ alias Tuple!(int, "FooBar", float, "Args", string, "Fun", string, "Bar") T2;
 string genRangeItemFillImpl(T)(string a) {
 	if(!isToExclude(a)) {
 		return 
-			"\t\tcase " ~ a ~ ":\n" ~
-			"\t\t\tstatic if(isIntegral!(" ~ T.stringof ~ 
-				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
+			"\t\tcase \"" ~ a ~ "\":\n" ~
+			"\t\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_int(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isFloatingPoint!(" ~ T.stringof ~ 
-				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
-			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_DOUBLE) {\n" ~
+			"\t\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_FLOAT) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_double(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isSomeString!(" ~ T.stringof ~ 
-				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
+			"\t\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_TEXT) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ 
 				" = to!string(sqlite3_column_text(stmt, i));\n" ~
-			"\t\t\t\t}\n" ~
+			"\t\t\t\t}\n\t\t\t\tbreak;\n" ~
 			"\t\t\t}\n";
 	}
 	return "";
@@ -118,44 +122,107 @@ string genRangeItemFillImpl(T)(string a) {
 string genRangeItemFillImpl(T, B...)(string a, B b) {
 	if(!isToExclude(a)) {
 		return 
-			"\t\tcase " ~ a ~ ":\n" ~
-			"\t\t\tstatic if(isIntegral!(" ~ T.stringof ~ 
-				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
+			"\t\tcase \"" ~ a ~ "\":\n" ~
+			"\t\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_int(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isFloatingPoint!(" ~ T.stringof ~ 
-				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
-			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_DOUBLE) {\n" ~
+			"\t\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_FLOAT) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_double(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isSomeString!(" ~ T.stringof ~ 
-				".__someNameYouWontGuess." ~ a ~ ")) {\n" ~
+			"\t\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_TEXT) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ 
 				" = to!string(sqlite3_column_text(stmt, i));\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t}\n" ~ genRangeItemFillImpl!(T)(b);
+			"\t\t\t}\n\t\t\tbreak;\n" ~ genRangeItemFillImpl!(T)(b);
 	}
 	return genRangeItemFillImpl!(T)(b);
 }
 
 string genRangeItemFill(T)() {
 	return T.stringof ~ " buildItem() {\n" ~
-		"\t" ~ T.stringof ~ " ret;\n" ~
+		"\t" ~ T.stringof ~ " ret" 
+			~ (is(T : Object) ? " = new " ~ T.stringof ~ "();\n" : ";\n") ~
 		"\tsize_t cc = sqlite3_column_count(stmt);\n" ~
 		"\tfor(int i = 0; i < cc; ++i) {\n" ~
 		"\t\tstring cn = to!string(sqlite3_column_name(stmt, i));\n"~
 		"\t\tswitch(cn) {\n" ~
+		"\t\tdefault: break;\n" ~
 		genRangeItemFillImpl!(T)(
 			__traits(allMembers, typeof(T.__someNameYouWontGuess))
-		) ~ "\t\t}\n" ~
+		) 
+		~ "\t\t}\n" ~
 		"\t}\n\treturn ret;\n}\n";
 
 }
 
-pragma(msg, genRangeItemFill!(MyStruct)());
+struct UniRange(T) {
+	T currentItem;
+	int sqlRsltCode;
+	sqlite3_stmt* stmt;
+
+	this(sqlite3_stmt* s) {
+		this.stmt = s;
+	}
+
+	~this() {
+		sqlite3_finalize(stmt);
+	}
+
+	mixin(genRangeItemFill!(T));
+
+	@property T front() {
+		return this.currentItem;
+	}
+
+	@property bool empty() const pure nothrow {
+		return sqlRsltCode == SQLITE_ERROR || sqlRsltCode == SQLITE_DONE;
+	}
+
+	@property void popFront() { 
+		if(sqlRsltCode == SQLITE_ROW) {
+			sqlRsltCode = sqlite3_step(stmt);
+			if(sqlRsltCode == SQLITE_ROW && sqlRsltCode != SQLITE_ERROR 
+					&& sqlRsltCode != SQLITE_DONE) {
+				this.currentItem = buildItem();
+			}
+		} else {
+			sqlite3_finalize(stmt);
+		}
+	}
+}
+
+struct Sqlite {
+	private string dbname;
+
+	this(string dbn) { 
+		dbName = dbn;
+		int rc = sqlite3_open(dbName, &db);
+		if(rc) {
+			throw new Error("Can't open database " 
+				~ dbName ~ " because of " ~ sqlite3_errmsg(db)
+			);
+		}
+	}
+
+	~this() {
+		sqlite3_close(db);
+	}
+
+
+	UniRange!(T) select(T,string tn = "")(string where = "") {
+		string s = "SELECT * FROM " ~ (tn.empty ? T.stringof : tn) ~ " "
+		~ (where.emtpy ? "" : where) ~ ";";
+		return makeIterator!(T)(stmtStr);
+	}
+}
 
 void main() {
 	T1 t;
+	UniRange!MyClass r;
 }
