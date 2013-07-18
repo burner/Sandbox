@@ -110,7 +110,7 @@ string genRangeItemFillImpl(T)(string a) {
 			"\t\t\t\t}\n" ~
 			"\t\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_TEXT) {\n" ~
+			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE3_TEXT) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ 
 				" = to!string(sqlite3_column_text(stmt, i));\n" ~
 			"\t\t\t\t}\n\t\t\t\tbreak;\n" ~
@@ -135,7 +135,7 @@ string genRangeItemFillImpl(T, B...)(string a, B b) {
 			"\t\t\t\t}\n" ~
 			"\t\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_TEXT) {\n" ~
+			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE3_TEXT) {\n" ~
 			"\t\t\t\t\tret." ~ a ~ 
 				" = to!string(sqlite3_column_text(stmt, i));\n" ~
 			"\t\t\t\t}\n" ~
@@ -166,8 +166,19 @@ struct UniRange(T) {
 	int sqlRsltCode;
 	sqlite3_stmt* stmt;
 
-	this(sqlite3_stmt* s) {
+	this(sqlite3_stmt* s, int rsc) {
+		this.sqlRsltCode = rsc;
 		this.stmt = s;
+		if(sqlRsltCode == SQLITE_OK) {
+			sqlRsltCode = sqlite3_step(stmt);
+			if(sqlRsltCode == SQLITE_ROW) {
+				buildItem();
+			} else {
+				sqlite3_finalize(stmt);
+			}
+		} else {
+			sqlite3_finalize(stmt);
+		}
 	}
 
 	~this() {
@@ -198,14 +209,15 @@ struct UniRange(T) {
 }
 
 struct Sqlite {
-	private string dbname;
+	private string dbName;
+	sqlite3 *db;
 
 	this(string dbn) { 
-		dbName = dbn;
-		int rc = sqlite3_open(dbName, &db);
+		this.dbName = dbn;
+		int rc = sqlite3_open(toStringz(dbName), &db);
 		if(rc) {
 			throw new Error("Can't open database " 
-				~ dbName ~ " because of " ~ sqlite3_errmsg(db)
+				~ dbName ~ " because of " ~ to!string(sqlite3_errmsg(db))
 			);
 		}
 	}
@@ -217,12 +229,37 @@ struct Sqlite {
 
 	UniRange!(T) select(T,string tn = "")(string where = "") {
 		string s = "SELECT * FROM " ~ (tn.empty ? T.stringof : tn) ~ " "
-		~ (where.emtpy ? "" : where) ~ ";";
-		return makeIterator!(T)(stmtStr);
+		~ (where.length == 0 ? "" : where) ~ ";";
+		return makeIterator!(T)(s);
 	}
+
+	UniRange!(T) makeIterator(T)(string stmtStr) {
+		sqlite3_stmt* stmt;
+ 		int rsltCode = sqlite3_prepare(db, toStringz(stmtStr), -1, 
+			&stmt, null
+		);
+		if(rsltCode == SQLITE_ERROR) {
+			throw new Exception("Select Statment:\"" ~
+					stmtStr ~ "\" failed with error:\"" ~
+					to!string(sqlite3_errmsg(db)) ~ "\"");
+		}
+		return UniRange!(T)(stmt, rsltCode);
+	}
+
+}
+
+alias Tuple!(string, "Firstname", string, "Lastname", int, "Zip") PersonData;
+
+struct Person {
+	mixin(genProperties!PersonData);
 }
 
 void main() {
 	T1 t;
 	UniRange!MyClass r;
+
+	Sqlite db = Sqlite("testtable.db");
+	foreach(it; db.select!(Person)()) {
+		writefln("%s %s %d", it.Firstname, it.Lastname, it.Zip);
+	}
 }
