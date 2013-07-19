@@ -161,6 +161,88 @@ string genRangeItemFill(T)() {
 
 }
 
+pure string prepareInsertStatmentImpl(T)(ref size_t cnt, string a) {
+	if(!isToExclude(a)) {
+		++cnt;
+		return a ~ ", ";
+	}
+	return "";
+}
+
+pure string prepareInsertStatmentImpl(T, B...)(ref size_t cnt, string a, B b) {
+	if(!isToExclude(a)) {
+		++cnt;
+		return a ~ ", " ~ prepareInsertStatmentImpl!(T)(cnt, b);	
+	}
+	return prepareInsertStatmentImpl!(T)(cnt, b);
+}
+
+pure string prepareAddParameterImpl(T)(string a) {
+	if(!isToExclude(a)) {
+		return "\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), t." ~ 
+			 a ~ ".length, SQLITE_STATIC);\n" ~
+		"\t\t}\n";
+	}
+	return "";
+}
+
+pure string prepareAddParameterImpl(T, B...)(string a, B b) {
+	if(!isToExclude(a)) {
+		return "\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), t." ~ 
+			 a ~ ".length, SQLITE_STATIC);\n" ~
+		"\t\t}\n" ~ prepareAddParameterImpl!(T)(b);
+	}
+	return prepareAddParameterImpl!(T)(b);
+}
+
+pure string prepareAddParameter(T)() {
+	return prepareAddParameterImpl!(T)(
+		__traits(allMembers, typeof(T.__someNameYouWontGuess))
+	);
+}
+
+alias Tuple!(size_t,string) InsertStatment;
+
+pure InsertStatment prepareInsertStatment(T)() {
+	size_t cnt = 0;
+	string ret = "INSERT INTO " ~ T.stringof ~ "(";
+	string values = prepareInsertStatmentImpl!(T)(cnt,
+		__traits(allMembers, typeof(T.__someNameYouWontGuess))
+	);
+	ret ~= values[0 .. $-2] ~ ") Values(";
+	for(size_t it = 1; it < cnt; ++it) {
+		ret ~= "?,";
+	}
+	ret ~= "?);";
+	return InsertStatment(cnt,ret);
+}
+
+
+unittest {
+	enum ret = prepareInsertStatment!(MyStruct)();
+	assert(ret[0] == 2);
+	//writeln(ret[1]);
+
+	enum param = prepareAddParameter!(MyStruct)();
+	//writeln(param);
+}
+
 struct UniRange(T) {
 	T currentItem;
 	int sqlRsltCode;
@@ -226,7 +308,6 @@ struct Sqlite {
 		sqlite3_close(db);
 	}
 
-
 	UniRange!(T) select(T,string tn = "")(string where = "") {
 		string s = "SELECT * FROM " ~ (tn.empty ? T.stringof : tn) ~ " "
 		~ (where.length == 0 ? "" : where) ~ ";";
@@ -246,6 +327,21 @@ struct Sqlite {
 		return UniRange!(T)(stmt, rsltCode);
 	}
 
+	void insert(T)(ref T elem) {
+		enum insertStatement = prepareInsertStatment!(T)();
+	}
+
+	void insertImpl(T)(InsertStatment insertStatement, ref T t) {
+		sqlite3_stmt* stmt;
+		sqlite3_prepare_v2(db, toStringz(insertStatement[1]),
+			insertStatement[1].length, &stmt, null
+		);
+	}
+
+	void addParameter(T)(ref T t, sqlite3_stmt* stmt) {
+		size_t idx = 0;
+		mixin(prepareAddParameter!(T)());
+	}
 }
 
 alias Tuple!(string, "Firstname", string, "Lastname", int, "Zip") PersonData;
@@ -258,8 +354,11 @@ void main() {
 	T1 t;
 	UniRange!MyClass r;
 
+	Person p;
+
 	Sqlite db = Sqlite("testtable.db");
-	foreach(it; db.select!(Person)()) {
+	db.insert(p);
+	/*foreach(it; db.select!(Person)()) {
 		writefln("%s %s %d", it.Firstname, it.Lastname, it.Zip);
-	}
+	}*/
 }
