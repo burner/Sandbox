@@ -1,4 +1,4 @@
 all:
 #./makedb.sh
-	dmd typeconstest.d -unittest -debug
-	./typeconstest
+	dmd sqliteabstraction.d sqlitetest.d -unittest -debug -ofsqlitetest
+	./sqlitetest
