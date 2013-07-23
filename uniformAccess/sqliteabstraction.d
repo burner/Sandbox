@@ -1,4 +1,4 @@
-module typeconstest;
+module sqliteabstraction;
 
 import std.array;
 import std.algorithm;
@@ -179,16 +179,16 @@ pure string prepareInsertStatmentImpl(T, B...)(ref size_t cnt, string a, B b) {
 
 pure string prepareAddParameterImpl(T)(string a) {
 	if(!isToExclude(a)) {
-		return "\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ a ~ ");\n" ~
-		"\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+		"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ a ~ ");\n" ~
-		"\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+		"\t\t} else static if(isSomeString!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), t." ~ 
-			 a ~ ".length, SQLITE_STATIC);\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), to!int(t." ~ 
+			 a ~ ".length), SQLITE_STATIC);\n" ~
 		"\t\t}\n";
 	}
 	return "";
@@ -196,16 +196,16 @@ pure string prepareAddParameterImpl(T)(string a) {
 
 pure string prepareAddParameterImpl(T, B...)(string a, B b) {
 	if(!isToExclude(a)) {
-		return "\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ a ~ ");\n" ~
-		"\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+		"\t\t} else static if(isFloatingPoint!(typeof(T" ~
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ a ~ ");\n" ~
-		"\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+		"\t\t} else static if(isSomeString!(typeof(T"  ~
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), t." ~ 
-			 a ~ ".length, SQLITE_STATIC);\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), to!int(t." ~ 
+			 a ~ ".length), SQLITE_STATIC);\n" ~
 		"\t\t}\n" ~ prepareAddParameterImpl!(T)(b);
 	}
 	return prepareAddParameterImpl!(T)(b);
@@ -328,30 +328,33 @@ struct Sqlite {
 	}
 
 	void insert(T)(ref T elem) {
+		sqlite3_stmt* stmt;
 		enum insertStatement = prepareInsertStatment!(T)();
-		insertImpl!(T)(insertStatement, elem);
+		insertImpl!(T)(insertStatement, elem, stmt);
+		sqlite3_step(stmt);
 	}
 
-	void insertImpl(T)(InsertStatment insertStatement, ref T t) {
-		sqlite3_stmt* stmt;
+	void insertImpl(T)(InsertStatment insertStatement, ref T t, 
+			ref sqlite3_stmt* stmt) {
 		sqlite3_prepare_v2(db, toStringz(insertStatement[1]),
-			insertStatement[1].length, &stmt, null
+			to!int(insertStatement[1].length), &stmt, null
 		);
 		addParameter!(T)(t, stmt);
 	}
 
 	void addParameter(T)(ref T t, sqlite3_stmt* stmt) {
-		size_t i = 0;
+		int i = 0;
+		pragma(msg, prepareAddParameter!(T)());
 		mixin(prepareAddParameter!(T)());
 	}
 }
 
-alias Tuple!(string, "Firstname", string, "Lastname", int, "Zip") PersonData;
+//alias Tuple!(string, "Firstname", string, "Lastname", int, "Zip") PersonData;
 
-struct Person {
+/*struct Person {
 	mixin(genProperties!PersonData);
-}
-
+}*/
+/*
 void main() {
 	T1 t;
 	UniRange!MyClass r;
@@ -360,7 +363,7 @@ void main() {
 
 	Sqlite db = Sqlite("testtable.db");
 	db.insert(p);
-	/*foreach(it; db.select!(Person)()) {
+	foreach(it; db.select!(Person)()) {
 		writefln("%s %s %d", it.Firstname, it.Lastname, it.Zip);
-	}*/
-}
+	}
+}*/
