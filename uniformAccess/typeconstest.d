@@ -329,6 +329,7 @@ struct Sqlite {
 
 	void insert(T)(ref T elem) {
 		enum insertStatement = prepareInsertStatment!(T)();
+		insertImpl!(T)(insertStatement, elem);
 	}
 
 	void insertImpl(T)(InsertStatment insertStatement, ref T t) {
@@ -336,10 +337,11 @@ struct Sqlite {
 		sqlite3_prepare_v2(db, toStringz(insertStatement[1]),
 			insertStatement[1].length, &stmt, null
 		);
+		addParameter!(T)(t, stmt);
 	}
 
 	void addParameter(T)(ref T t, sqlite3_stmt* stmt) {
-		size_t idx = 0;
+		size_t i = 0;
 		mixin(prepareAddParameter!(T)());
 	}
 }
