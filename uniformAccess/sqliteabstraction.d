@@ -189,7 +189,8 @@ pure string prepareAddParameterImpl(T)(string a) {
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), to!int(t." ~ 
 			 a ~ ".length), SQLITE_STATIC);\n" ~
-		"\t\t}\n";
+		"\t\t} else {\n"
+		"\t\t\tstatic assert(false);\n\t\t}\n";
 	}
 	return "";
 }
@@ -206,7 +207,8 @@ pure string prepareAddParameterImpl(T, B...)(string a, B b) {
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), to!int(t." ~ 
 			 a ~ ".length), SQLITE_STATIC);\n" ~
-		"\t\t}\n" ~ prepareAddParameterImpl!(T)(b);
+		"\t\t} else {\n"
+		"\t\t\tstatic assert(false);\n\t\t}\n" ~ prepareAddParameterImpl!(T)(b);
 	}
 	return prepareAddParameterImpl!(T)(b);
 }
@@ -293,6 +295,7 @@ struct UniRange(T) {
 struct Sqlite {
 	private string dbName;
 	sqlite3 *db;
+	sqlite3_stmt* stmt;
 
 	this(string dbn) { 
 		this.dbName = dbn;
@@ -315,7 +318,6 @@ struct Sqlite {
 	}
 
 	UniRange!(T) makeIterator(T)(string stmtStr) {
-		sqlite3_stmt* stmt;
  		int rsltCode = sqlite3_prepare(db, toStringz(stmtStr), -1, 
 			&stmt, null
 		);
@@ -327,11 +329,34 @@ struct Sqlite {
 		return UniRange!(T)(stmt, rsltCode);
 	}
 
+	void beginTransaction() {
+		char* errorMessage;
+		sqlite3_exec(db, "BEGIN TRANSACTION", null, null, &errorMessage);
+	}
+
+	void endTransaction() {
+		char* errorMessage;
+		sqlite3_exec(db, "COMMIT TRANSACTION", null, null, &errorMessage);
+		if(sqlite3_finalize(stmt) != SQLITE_OK) {
+			throw new Error("failed with error:\"" ~
+					to!string(sqlite3_errmsg(db)) ~ "\"");
+		}
+	}
+
 	void insert(T)(ref T elem) {
-		sqlite3_stmt* stmt;
 		enum insertStatement = prepareInsertStatment!(T)();
+		//pragma(msg, insertStatement[1]);
 		insertImpl!(T)(insertStatement, elem, stmt);
-		sqlite3_step(stmt);
+		step(InsertStatment[1]);
+	}
+
+	void insertBlank(T)(ref T elem) {
+		//sqlite3_stmt* stmt;
+		enum insertStatement = prepareInsertStatment!(T)();
+		//pragma(msg, insertStatement[1]);
+		insertImpl!(T)(insertStatement, elem, stmt);
+		step(insertStatement[1]);
+		sqlite3_reset(stmt);
 	}
 
 	void insertImpl(T)(InsertStatment insertStatement, ref T t, 
@@ -344,26 +369,14 @@ struct Sqlite {
 
 	void addParameter(T)(ref T t, sqlite3_stmt* stmt) {
 		int i = 0;
-		pragma(msg, prepareAddParameter!(T)());
+		//pragma(msg, prepareAddParameter!(T)());
 		mixin(prepareAddParameter!(T)());
 	}
-}
 
-//alias Tuple!(string, "Firstname", string, "Lastname", int, "Zip") PersonData;
-
-/*struct Person {
-	mixin(genProperties!PersonData);
-}*/
-/*
-void main() {
-	T1 t;
-	UniRange!MyClass r;
-
-	Person p;
-
-	Sqlite db = Sqlite("testtable.db");
-	db.insert(p);
-	foreach(it; db.select!(Person)()) {
-		writefln("%s %s %d", it.Firstname, it.Lastname, it.Zip);
+	void step(string stmtStr) {
+		if(sqlite3_step(stmt) != SQLITE_DONE) {
+			throw new Error(stmtStr ~ " " ~
+					to!string(sqlite3_errmsg(db)));
+		}
 	}
-}*/
+}
