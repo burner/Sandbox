@@ -34,7 +34,8 @@ string makeName(T, string n)() {
 }
 
 unittest {
-	static assert(makeName!(T1, "Args")() == "Tuple!(int, \"FooBar\", float, \"Args\").Args");
+	static assert(makeName!(T1, "Args")() == 
+		"Tuple!(int, \"FooBar\", float, \"Args\").Args");
 }
 
 string genProImpl(T)(string a) {
@@ -89,6 +90,24 @@ unittest {
 	assert(ms.FooBar == 1337);
 	ms.Bar = "Bar";
 	assert(ms.Bar == "Bar");
+}
+
+string removeKeyPostFix(string str) {
+	immutable string key = "Key";
+	ptrdiff_t idx = str.lastIndexOf(key);
+	writeln(str[0 .. idx]);
+	if(idx != -1 && idx != 0) {
+		return str[0 .. idx];	
+	}
+	return str;
+}
+
+unittest {
+	string foo = "FirstnameKey";
+	assert(removeKeyPostFix(foo) == "Firstname", removeKeyPostFix(foo));
+
+	string bar = "Key";
+	assert(removeKeyPostFix(bar) == "Key", removeKeyPostFix(bar));
 }
 
 alias Tuple!(int, "FooBar", float, "Args") T1;
@@ -350,6 +369,14 @@ struct Sqlite {
 		step(InsertStatment[1]);
 	}
 
+	void insert(R)(R r) if(isForwardRange!R) {
+		beginTransaction();
+		foreach(it; r) {
+			insertBlank(it);
+		}
+		endTransaction();
+	}
+
 	void insertBlank(T)(ref T elem) {
 		//sqlite3_stmt* stmt;
 		enum insertStatement = prepareInsertStatment!(T)();
@@ -367,6 +394,14 @@ struct Sqlite {
 		addParameter!(T)(t, stmt);
 	}
 
+	void remove(T)(ref T elem) {
+
+	}
+
+	void removeImpl(T)(ref T elem) {
+
+	}
+
 	void addParameter(T)(ref T t, sqlite3_stmt* stmt) {
 		int i = 0;
 		//pragma(msg, prepareAddParameter!(T)());
@@ -377,6 +412,14 @@ struct Sqlite {
 		if(sqlite3_step(stmt) != SQLITE_DONE) {
 			throw new Error(stmtStr ~ " " ~
 					to!string(sqlite3_errmsg(db)));
+		}
+	}
+
+	static void checkForDeleteAndInsertDropExpr(string str) {
+		if(std.string.indexOf(str, "drop", CaseSensitive.no) == -1 ||
+				std.string.indexOf(str, "insert", CaseSensitive.no) == -1 ||
+				std.string.indexOf(str, "remove", CaseSensitive.no) == -1) {
+			throw new Error("Stmt must not contain non const operation");
 		}
 	}
 }
