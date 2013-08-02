@@ -5,8 +5,8 @@ import std.typecons;
 import std.stdio;
 
 alias Tuple!(
-	string, "Firstname",
-	string, "Lastname",
+	string, "Firstname_Key",
+	string, "Lastname_Key",
 	string, "Company",
 	string, "Address",
 	string, "County",
@@ -14,7 +14,7 @@ alias Tuple!(
 	string, "State",
 	int, 	"Zip",
 	string, "PhoneWork",
-	string, "PhonePrivat",
+	string, "PhonePrivat_Key",
 	string, "Mail",
 	string, "Www") PersonInformation;
 

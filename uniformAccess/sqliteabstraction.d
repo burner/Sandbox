@@ -41,10 +41,10 @@ unittest {
 string genProImpl(T)(string a) {
 	if(!isToExclude(a)) {
 		return format("public @property auto %s() { \n\treturn " ~
-				"__someNameYouWontGuess.%s; \n}\n\n", a, a)
+				"__someNameYouWontGuess.%s; \n}\n\n", removeKeyPostFix(a), a)
 			~ format("public @property void %s(typeof(%s.%s) n) {\n" ~
-				"__someNameYouWontGuess.%s = n;\n}\n\n", a, T.stringof, a, a, a
-				);
+				"__someNameYouWontGuess.%s = n;\n}\n\n", removeKeyPostFix(a),
+			   	T.stringof, a, a, a);
 	}
 	return "";
 }
@@ -52,10 +52,10 @@ string genProImpl(T)(string a) {
 string genProImpl(T, B...)(string a, B b) {
 	if(!isToExclude(a)) {
 		return format("public @property auto %s() { \n\treturn " ~
-				"__someNameYouWontGuess.%s; \n}\n\n", a, a)
+				"__someNameYouWontGuess.%s; \n}\n\n", removeKeyPostFix(a), a)
 			~ format("public @property void %s(typeof(%s.%s) n) {\n" ~
-				"\t__someNameYouWontGuess.%s = n;\n}\n\n", a, T.stringof, a, a) 
-				~ genProImpl!(T)(b);
+				"\t__someNameYouWontGuess.%s = n;\n}\n\n", removeKeyPostFix(a),
+			   	T.stringof, a, a) ~ genProImpl!(T)(b);
 	}
 
 	return genProImpl!(T)(b);
@@ -63,7 +63,34 @@ string genProImpl(T, B...)(string a, B b) {
 
 string genProperties(T)() {
 	return T.stringof ~ " __someNameYouWontGuess;\n"
-		~ genProImpl!(T)(__traits(allMembers, T));
+		~ genProImpl!(T)(__traits(allMembers, T)) ~ "\n" ~
+		"immutable(string) __keyFieldNames = " ~ 
+		'\"' ~ genKeyNames!(T)(__traits(allMembers, T)) ~ "\";\n";
+}
+
+pure string genKeyNamesImpl(T)(string a) {
+	int idx = findKeyPostFix(a);
+	if(!isToExclude(a) && idx != -1) {
+		return removeKeyPostFix(a);
+	}
+	return "";
+}
+
+pure string genKeyNamesImpl(T, B...)(string a, B b) {
+	int idx = findKeyPostFix(a);
+	if(!isToExclude(a) && idx != -1) {
+		return "," ~ removeKeyPostFix(a) ~ genKeyNamesImpl!(T)(b);
+	}
+	return "" ~ genKeyNamesImpl!(T)(b);
+}
+
+pure string genKeyNames(T,B...)(B b) {
+	string ret = genKeyNamesImpl!(T)(b);
+	if(!ret.empty) {
+		return ret[1 .. $];
+	} else {
+		return ret;
+	}
 }
 
 struct MyStruct {
@@ -92,10 +119,62 @@ unittest {
 	assert(ms.Bar == "Bar");
 }
 
-string removeKeyPostFix(string str) {
-	immutable string key = "Key";
-	ptrdiff_t idx = str.lastIndexOf(key);
-	writeln(str[0 .. idx]);
+pure int findKeyPostFix(string str) {
+	immutable string key = "_Key";
+	return str.length < 4 ? 
+		- 1 : (str[$-4 .. $] == key) ? str.length -4 : -1;
+}
+
+alias Tuple!(string,string) RemoveStatement;
+
+pure string genRemoveCodeImpl(T)(string a) {
+	int idx = findKeyPostFix(a);
+	string aK = removeKeyPostFix(a);
+	if(!isToExclude(a) && idx != -1) {
+		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
+		"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
+		"\t\t} else static if(isSomeString!(typeof(T" ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
+			 aK ~ ".length), SQLITE_STATIC);\n" ~
+		"\t\t} else {\n"
+		"\t\t\tstatic assert(false);\n\t\t}\n";
+	}
+	return "";
+}
+
+pure string genRemoveCodeImpl(T, B...)(string a, B b) {
+	int idx = findKeyPostFix(a);
+	string aK = removeKeyPostFix(a);
+	if(!isToExclude(a) && idx != -1) {
+		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
+		"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
+		"\t\t} else static if(isSomeString!(typeof(T" ~ 
+			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
+			 aK ~ ".length), SQLITE_STATIC);\n" ~
+		"\t\t} else {\n"
+		"\t\t\tstatic assert(false);\n\t\t}\n" ~ genRemoveCodeImpl!(T)(b);
+	}
+	return "" ~ genRemoveCodeImpl!(T)(b);
+}
+
+pure string genRemoveCode(T)() {
+	return genRemoveCodeImpl!(T)(__traits(allMembers, T));
+}
+
+
+pure string removeKeyPostFix(string str) {
+	immutable string key = "_Key";
+	int idx = findKeyPostFix(str);
 	if(idx != -1 && idx != 0) {
 		return str[0 .. idx];	
 	}
@@ -103,10 +182,10 @@ string removeKeyPostFix(string str) {
 }
 
 unittest {
-	string foo = "FirstnameKey";
-	assert(removeKeyPostFix(foo) == "Firstname", removeKeyPostFix(foo));
+	immutable string foo = "Firstname_Key";
+	static assert(removeKeyPostFix(foo) == "Firstname", removeKeyPostFix(foo));
 
-	string bar = "Key";
+	immutable string bar = "Key";
 	assert(removeKeyPostFix(bar) == "Key", removeKeyPostFix(bar));
 }
 
@@ -114,9 +193,10 @@ alias Tuple!(int, "FooBar", float, "Args") T1;
 alias Tuple!(int, "FooBar", float, "Args", string, "Fun", string, "Bar") T2;
 
 string genRangeItemFillImpl(T)(string a) {
+	//a = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		return 
-			"\t\tcase \"" ~ a ~ "\":\n" ~
+			"\t\tcase \"" ~ removeKeyPostFix(a) ~ "\":\n" ~
 			"\t\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
@@ -139,9 +219,10 @@ string genRangeItemFillImpl(T)(string a) {
 }
 
 string genRangeItemFillImpl(T, B...)(string a, B b) {
+	//a = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		return 
-			"\t\tcase \"" ~ a ~ "\":\n" ~
+			"\t\tcase \"" ~ removeKeyPostFix(a) ~ "\":\n" ~
 			"\t\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
@@ -181,6 +262,7 @@ string genRangeItemFill(T)() {
 }
 
 pure string prepareInsertStatmentImpl(T)(ref size_t cnt, string a) {
+	a = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		++cnt;
 		return a ~ ", ";
@@ -189,6 +271,7 @@ pure string prepareInsertStatmentImpl(T)(ref size_t cnt, string a) {
 }
 
 pure string prepareInsertStatmentImpl(T, B...)(ref size_t cnt, string a, B b) {
+	a = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		++cnt;
 		return a ~ ", " ~ prepareInsertStatmentImpl!(T)(cnt, b);	
@@ -197,17 +280,18 @@ pure string prepareInsertStatmentImpl(T, B...)(ref size_t cnt, string a, B b) {
 }
 
 pure string prepareAddParameterImpl(T)(string a) {
+	string aK = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
 		"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
 		"\t\t} else static if(isSomeString!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), to!int(t." ~ 
-			 a ~ ".length), SQLITE_STATIC);\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
+			 aK ~ ".length), SQLITE_STATIC);\n" ~
 		"\t\t} else {\n"
 		"\t\t\tstatic assert(false);\n\t\t}\n";
 	}
@@ -215,17 +299,18 @@ pure string prepareAddParameterImpl(T)(string a) {
 }
 
 pure string prepareAddParameterImpl(T, B...)(string a, B b) {
+	string aK = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
 		"\t\t} else static if(isFloatingPoint!(typeof(T" ~
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ a ~ ");\n" ~
+		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
 		"\t\t} else static if(isSomeString!(typeof(T"  ~
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ a ~ "), to!int(t." ~ 
-			 a ~ ".length), SQLITE_STATIC);\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
+			 aK ~ ".length), SQLITE_STATIC);\n" ~
 		"\t\t} else {\n"
 		"\t\t\tstatic assert(false);\n\t\t}\n" ~ prepareAddParameterImpl!(T)(b);
 	}
@@ -237,6 +322,20 @@ pure string prepareAddParameter(T)() {
 		__traits(allMembers, typeof(T.__someNameYouWontGuess))
 	);
 }
+
+RemoveStatement prepareRemoveStatement(T)() {
+	size_t comma = T.__keyFieldNames.count(',');
+	string ret = "DELETE FROM " ~ T.stringof ~ "WHERE ";
+	auto sp = T.__keyFieldNames.split(",");
+	foreach(it; sp) {
+		ret ~= it ~ " = ? AND ";
+	}
+	ret = ret[0 .. $-4] ~ ";";
+
+	return RemoveStatement(ret, genRemoveCode!(T)());
+}
+
+pragma(msg, prepareRemoveStatement!(MyStruct)());
 
 alias Tuple!(size_t,string) InsertStatment;
 
@@ -399,7 +498,9 @@ struct Sqlite {
 	}
 
 	void removeImpl(T)(ref T elem) {
-
+		enum removeStmt = prepareRemoveStatement!(T)();
+		int idx = 0;
+		
 	}
 
 	void addParameter(T)(ref T t, sqlite3_stmt* stmt) {
