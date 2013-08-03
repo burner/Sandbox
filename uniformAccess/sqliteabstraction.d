@@ -121,8 +121,8 @@ unittest {
 
 pure int findKeyPostFix(string str) {
 	immutable string key = "_Key";
-	return str.length < 4 ? 
-		- 1 : (str[$-4 .. $] == key) ? str.length -4 : -1;
+	return cast(int)(str.length < 4 ? 
+		- 1 : (str[$-4 .. $] == key) ? str.length -4 : -1);
 }
 
 alias Tuple!(string,string) RemoveStatement;
@@ -130,7 +130,7 @@ alias Tuple!(string,string) RemoveStatement;
 pure string genRemoveCodeImpl(T)(string a) {
 	int idx = findKeyPostFix(a);
 	string aK = removeKeyPostFix(a);
-	if(!isToExclude(a) && idx != -1) {
+	if(!isToExclude(aK) && idx != -1) {
 		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
@@ -150,7 +150,7 @@ pure string genRemoveCodeImpl(T)(string a) {
 pure string genRemoveCodeImpl(T, B...)(string a, B b) {
 	int idx = findKeyPostFix(a);
 	string aK = removeKeyPostFix(a);
-	if(!isToExclude(a) && idx != -1) {
+	if(!isToExclude(aK) && idx != -1) {
 		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
@@ -325,17 +325,19 @@ pure string prepareAddParameter(T)() {
 
 RemoveStatement prepareRemoveStatement(T)() {
 	size_t comma = T.__keyFieldNames.count(',');
-	string ret = "DELETE FROM " ~ T.stringof ~ "WHERE ";
+	string ret = "DELETE FROM " ~ T.stringof ~ " WHERE ";
 	auto sp = T.__keyFieldNames.split(",");
+	bool loopRun = false;
 	foreach(it; sp) {
+		loopRun = true;
 		ret ~= it ~ " = ? AND ";
 	}
-	ret = ret[0 .. $-4] ~ ";";
+	ret = ret[0 .. loopRun ? $-4 : $] ~ ";";
 
 	return RemoveStatement(ret, genRemoveCode!(T)());
 }
 
-pragma(msg, prepareRemoveStatement!(MyStruct)());
+//pragma(msg, prepareRemoveStatement!(MyStruct)());
 
 alias Tuple!(size_t,string) InsertStatment;
 

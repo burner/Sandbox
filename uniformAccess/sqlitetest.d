@@ -18,6 +18,8 @@ alias Tuple!(
 	string, "Mail",
 	string, "Www") PersonInformation;
 
+pragma(msg, prepareRemoveStatement!Person);
+
 struct Person {
 	mixin(genProperties!PersonInformation);
 }
