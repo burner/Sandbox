@@ -44,21 +44,13 @@ string genProImpl(T)(string a) {
 				"__someNameYouWontGuess.%s; \n}\n\n", removeKeyPostFix(a), a)
 			~ format("public @property void %s(typeof(%s.%s) n) {\n" ~
 				"__someNameYouWontGuess.%s = n;\n}\n\n", removeKeyPostFix(a),
-			   	T.stringof, a, a, a);
+			   	T.stringof, a, a);
 	}
 	return "";
 }
 
 string genProImpl(T, B...)(string a, B b) {
-	if(!isToExclude(a)) {
-		return format("public @property auto %s() { \n\treturn " ~
-				"__someNameYouWontGuess.%s; \n}\n\n", removeKeyPostFix(a), a)
-			~ format("public @property void %s(typeof(%s.%s) n) {\n" ~
-				"\t__someNameYouWontGuess.%s = n;\n}\n\n", removeKeyPostFix(a),
-			   	T.stringof, a, a) ~ genProImpl!(T)(b);
-	}
-
-	return genProImpl!(T)(b);
+	return genProImpl!(T)(a) ~ genProImpl!(T)(b);
 }
 
 string genProperties(T)() {
@@ -148,23 +140,7 @@ pure string genRemoveCodeImpl(T)(string a) {
 }
 
 pure string genRemoveCodeImpl(T, B...)(string a, B b) {
-	int idx = findKeyPostFix(a);
-	string aK = removeKeyPostFix(a);
-	if(!isToExclude(aK) && idx != -1) {
-		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
-			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
-		"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
-			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
-		"\t\t} else static if(isSomeString!(typeof(T" ~ 
-			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
-			 aK ~ ".length), SQLITE_STATIC);\n" ~
-		"\t\t} else {\n"
-		"\t\t\tstatic assert(false);\n\t\t}\n" ~ genRemoveCodeImpl!(T)(b);
-	}
-	return "" ~ genRemoveCodeImpl!(T)(b);
+	return genRemoveCodeImpl!(T)(a) ~ genRemoveCodeImpl!(T)(b);
 }
 
 pure string genRemoveCode(T)() {
@@ -172,7 +148,6 @@ pure string genRemoveCode(T)() {
 		__traits(allMembers, typeof(T.__someNameYouWontGuess))
 	);
 }
-
 
 pure string removeKeyPostFix(string str) {
 	immutable string key = "_Key";
@@ -195,7 +170,6 @@ alias Tuple!(int, "FooBar", float, "Args") T1;
 alias Tuple!(int, "FooBar", float, "Args", string, "Fun", string, "Bar") T2;
 
 string genRangeItemFillImpl(T)(string a) {
-	//a = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		return 
 			"\t\tcase \"" ~ removeKeyPostFix(a) ~ "\":\n" ~
@@ -221,29 +195,7 @@ string genRangeItemFillImpl(T)(string a) {
 }
 
 string genRangeItemFillImpl(T, B...)(string a, B b) {
-	//a = removeKeyPostFix(a);
-	if(!isToExclude(a)) {
-		return 
-			"\t\tcase \"" ~ removeKeyPostFix(a) ~ "\":\n" ~
-			"\t\t\tstatic if(isIntegral!(typeof(T" ~ 
-				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
-			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_int(stmt, i);\n" ~
-			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
-				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_FLOAT) {\n" ~
-			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_double(stmt, i);\n" ~
-			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isSomeString!(typeof(T" ~ 
-				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE3_TEXT) {\n" ~
-			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ 
-				" = to!string(sqlite3_column_text(stmt, i));\n" ~
-			"\t\t\t\t}\n" ~
-			"\t\t\t}\n\t\t\tbreak;\n" ~ genRangeItemFillImpl!(T)(b);
-	}
-	return genRangeItemFillImpl!(T)(b);
+	return genRangeItemFillImpl!(T)(a) ~ genRangeItemFillImpl!(T)(b);
 }
 
 string genRangeItemFill(T)() {
@@ -301,22 +253,7 @@ pure string prepareAddParameterImpl(T)(string a) {
 }
 
 pure string prepareAddParameterImpl(T, B...)(string a, B b) {
-	string aK = removeKeyPostFix(a);
-	if(!isToExclude(a)) {
-		return "\t\tstatic if(isIntegral!(typeof(T" ~ 
-			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ aK ~ ");\n" ~
-		"\t\t} else static if(isFloatingPoint!(typeof(T" ~
-			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
-		"\t\t} else static if(isSomeString!(typeof(T"  ~
-			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
-			 aK ~ ".length), SQLITE_STATIC);\n" ~
-		"\t\t} else {\n"
-		"\t\t\tstatic assert(false);\n\t\t}\n" ~ prepareAddParameterImpl!(T)(b);
-	}
-	return prepareAddParameterImpl!(T)(b);
+	return prepareAddParameterImpl!(T)(a) ~ prepareAddParameterImpl!(T)(b);
 }
 
 pure string prepareAddParameter(T)() {
@@ -481,7 +418,6 @@ struct Sqlite {
 	}
 
 	void insertBlank(T)(ref T elem) {
-		//sqlite3_stmt* stmt;
 		enum insertStatement = prepareInsertStatment!(T)();
 		//pragma(msg, insertStatement[1]);
 		insertImpl!(T)(insertStatement, elem, stmt);

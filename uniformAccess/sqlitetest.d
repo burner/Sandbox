@@ -1,8 +1,9 @@
-import sqliteabstraction;
+import sqlitetest;
 
 import std.csv;
 import std.typecons;
 import std.stdio;
+import sqliteabstraction;
 
 alias Tuple!(
 	string, "Firstname_Key",
@@ -12,7 +13,7 @@ alias Tuple!(
 	string, "County",
 	string, "City",
 	string, "State",
-	int, 	"Zip",
+	string, "Zip",
 	string, "PhoneWork",
 	string, "PhonePrivat_Key",
 	string, "Mail",
@@ -30,13 +31,24 @@ void main() {
 	auto f = File("50000.csv", "r");
 	db.beginTransaction();
 	foreach(l; f.byLine()) {
-		foreach(person; csvReader!(Tuple!(string,string,string,string,
-							string,string,string,int,string,
-							string,string,string,string))(l)) {
-			/*writefln("%s %s %s %s %s %s %s %s %s %s %s %s", person[0],
+		foreach(person; csvReader!(
+				Tuple!(string, // Firstname
+					string,	// Lastname
+					string, // Company
+					string, // Address
+					string, // District
+					string, // City
+					string, // State
+					string,	// zip
+					string, // Phone
+					string, // Phone Privat
+					string, // Mail
+					string, // www
+					))(l)) {
+			/*writefln("%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s", person[0],
 					person[1], person[2], person[3], person[4], person[5],
 					person[6], person[7], person[8], person[9], person[10],
-					person[11], person[12]);
+					person[11]);
 			*/
 
 			Person p;
@@ -75,6 +87,6 @@ void main() {
 
 	auto range = db.select!Person();
 	foreach(it; range) {
-		writeln(it);
+		//writeln(it);
 	}
 }
