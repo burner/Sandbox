@@ -168,7 +168,9 @@ pure string genRemoveCodeImpl(T, B...)(string a, B b) {
 }
 
 pure string genRemoveCode(T)() {
-	return genRemoveCodeImpl!(T)(__traits(allMembers, T));
+	return genRemoveCodeImpl!(T)(
+		__traits(allMembers, typeof(T.__someNameYouWontGuess))
+	);
 }
 
 
@@ -495,22 +497,26 @@ struct Sqlite {
 		addParameter!(T)(t, stmt);
 	}
 
-	void remove(T)(ref T elem) {
-
-	}
-
-	void removeImpl(T)(ref T elem) {
-		enum removeStmt = prepareRemoveStatement!(T)();
-		int idx = 0;
-		
-	}
-
 	void addParameter(T)(ref T t, sqlite3_stmt* stmt) {
 		int i = 0;
 		//pragma(msg, prepareAddParameter!(T)());
 		mixin(prepareAddParameter!(T)());
 	}
 
+	void remove(T)(ref T elem) {
+		removeImpl!(T)(elem);
+	}
+
+	void removeImpl(T)(ref T t) {
+		enum removeStmt = prepareRemoveStatement!(T)();
+		int i = 0;
+		sqlite3_prepare_v2(db, toStringz(removeStmt[0]),
+			to!int(removeStmt[0].length), &stmt, null
+		);
+		mixin(removeStmt[1]);
+		step(removeStmt[0]);
+		
+	}
 	void step(string stmtStr) {
 		if(sqlite3_step(stmt) != SQLITE_DONE) {
 			throw new Error(stmtStr ~ " " ~

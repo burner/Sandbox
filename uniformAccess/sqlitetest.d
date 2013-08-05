@@ -18,7 +18,7 @@ alias Tuple!(
 	string, "Mail",
 	string, "Www") PersonInformation;
 
-pragma(msg, prepareRemoveStatement!Person);
+//pragma(msg, prepareRemoveStatement!Person);
 
 struct Person {
 	mixin(genProperties!PersonInformation);
@@ -26,6 +26,7 @@ struct Person {
 
 void main() {
 	Sqlite db = Sqlite("testtable.db");
+	Person toDel;
 	auto f = File("50000.csv", "r");
 	db.beginTransaction();
 	foreach(l; f.byLine()) {
@@ -52,6 +53,7 @@ void main() {
 			p.Mail = person[10];
 			p.Www = person[11];
 
+			toDel = p;
 			assert(p.Firstname == person[0]);
 			assert(p.Lastname == person[1]);
 			assert(p.Company == person[2]);
@@ -68,4 +70,6 @@ void main() {
 		}
 	}
 	db.endTransaction();
+	db.remove(toDel);
+	writeln(toDel);
 }
