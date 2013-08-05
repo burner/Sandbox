@@ -72,4 +72,9 @@ void main() {
 	db.endTransaction();
 	db.remove(toDel);
 	writeln(toDel);
+
+	auto range = db.select!Person();
+	foreach(it; range) {
+		writeln(it);
+	}
 }

@@ -199,20 +199,20 @@ string genRangeItemFillImpl(T)(string a) {
 	if(!isToExclude(a)) {
 		return 
 			"\t\tcase \"" ~ removeKeyPostFix(a) ~ "\":\n" ~
-			"\t\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+			"\t\t\tstatic if(isIntegral!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_int(stmt, i);\n" ~
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_int(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+			"\t\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_FLOAT) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_double(stmt, i);\n" ~
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_double(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+			"\t\t\t} else static if(isSomeString!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE3_TEXT) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ 
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ 
 				" = to!string(sqlite3_column_text(stmt, i));\n" ~
 			"\t\t\t\t}\n\t\t\t\tbreak;\n" ~
 			"\t\t\t}\n";
@@ -225,20 +225,20 @@ string genRangeItemFillImpl(T, B...)(string a, B b) {
 	if(!isToExclude(a)) {
 		return 
 			"\t\tcase \"" ~ removeKeyPostFix(a) ~ "\":\n" ~
-			"\t\t\tstatic if(isIntegral!(typeof(" ~ T.stringof ~ 
+			"\t\t\tstatic if(isIntegral!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_int(stmt, i);\n" ~
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_int(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isFloatingPoint!(typeof(" ~ T.stringof ~ 
+			"\t\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_FLOAT) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ " = sqlite3_column_double(stmt, i);\n" ~
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_double(stmt, i);\n" ~
 			"\t\t\t\t}\n" ~
-			"\t\t\t} else static if(isSomeString!(typeof(" ~ T.stringof ~ 
+			"\t\t\t} else static if(isSomeString!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE3_TEXT) {\n" ~
-			"\t\t\t\t\tret." ~ a ~ 
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ 
 				" = to!string(sqlite3_column_text(stmt, i));\n" ~
 			"\t\t\t\t}\n" ~
 			"\t\t\t}\n\t\t\tbreak;\n" ~ genRangeItemFillImpl!(T)(b);
@@ -247,9 +247,9 @@ string genRangeItemFillImpl(T, B...)(string a, B b) {
 }
 
 string genRangeItemFill(T)() {
-	return T.stringof ~ " buildItem() {\n" ~
-		"\t" ~ T.stringof ~ " ret" 
-			~ (is(T : Object) ? " = new " ~ T.stringof ~ "();\n" : ";\n") ~
+	return "T buildItem(T)() {\n" ~
+		"\tT ret" 
+			~ (is(T : Object) ? " = new T();\n" : ";\n") ~
 		"\tsize_t cc = sqlite3_column_count(stmt);\n" ~
 		"\tfor(int i = 0; i < cc; ++i) {\n" ~
 		"\t\tstring cn = to!string(sqlite3_column_name(stmt, i));\n"~
@@ -367,54 +367,54 @@ unittest {
 	//writeln(param);
 }
 
-struct UniRange(T) {
-	T currentItem;
-	int sqlRsltCode;
-	sqlite3_stmt* stmt;
-
-	this(sqlite3_stmt* s, int rsc) {
-		this.sqlRsltCode = rsc;
-		this.stmt = s;
-		if(sqlRsltCode == SQLITE_OK) {
-			sqlRsltCode = sqlite3_step(stmt);
-			if(sqlRsltCode == SQLITE_ROW) {
-				buildItem();
+struct Sqlite {
+	struct UniRange(T) {
+		T currentItem;
+		int sqlRsltCode;
+		sqlite3_stmt* stmt;
+	
+		this(sqlite3_stmt* s, int rsc) {
+			this.sqlRsltCode = rsc;
+			this.stmt = s;
+			if(sqlRsltCode == SQLITE_OK) {
+				sqlRsltCode = sqlite3_step(stmt);
+				if(sqlRsltCode == SQLITE_ROW) {
+					buildItem!T();
+				} else {
+					sqlite3_finalize(stmt);
+				}
 			} else {
 				sqlite3_finalize(stmt);
 			}
-		} else {
+		}
+	
+		~this() {
 			sqlite3_finalize(stmt);
 		}
-	}
-
-	~this() {
-		sqlite3_finalize(stmt);
-	}
-
-	mixin(genRangeItemFill!(T));
-
-	@property T front() {
-		return this.currentItem;
-	}
-
-	@property bool empty() const pure nothrow {
-		return sqlRsltCode == SQLITE_ERROR || sqlRsltCode == SQLITE_DONE;
-	}
-
-	@property void popFront() { 
-		if(sqlRsltCode == SQLITE_ROW) {
-			sqlRsltCode = sqlite3_step(stmt);
-			if(sqlRsltCode == SQLITE_ROW && sqlRsltCode != SQLITE_ERROR 
-					&& sqlRsltCode != SQLITE_DONE) {
-				this.currentItem = buildItem();
+	
+		@property T front() {
+			return this.currentItem;
+		}
+	
+		@property bool empty() const pure nothrow {
+			return sqlRsltCode == SQLITE_ERROR || sqlRsltCode == SQLITE_DONE;
+		}
+	
+		@property void popFront() { 
+			if(sqlRsltCode == SQLITE_ROW) {
+				sqlRsltCode = sqlite3_step(stmt);
+				if(sqlRsltCode == SQLITE_ROW && sqlRsltCode != SQLITE_ERROR 
+						&& sqlRsltCode != SQLITE_DONE) {
+					this.currentItem = buildItem!T();
+				}
+			} else {
+				sqlite3_finalize(stmt);
 			}
-		} else {
-			sqlite3_finalize(stmt);
 		}
+	
+		pragma(msg, genRangeItemFill!T);
+		mixin(genRangeItemFill!T);
 	}
-}
-
-struct Sqlite {
 	private string dbName;
 	sqlite3 *db;
 	sqlite3_stmt* stmt;
