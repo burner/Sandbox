@@ -85,12 +85,20 @@ pure string genKeyNames(T,B...)(B b) {
 	}
 }
 
+alias Tuple!(int, "FooBar", float, "Args") T1;
+alias Tuple!(int, "FooBar", float, "Args", string, "Fun", string, "Bar") T2;
+alias Tuple!(int, "FooBar", float, "Args", string, "Fun_Key", string, "Bar_Key") T3;
+
 struct MyStruct {
 	mixin(genProperties!T1);
 }
 
 struct MyStruct2 {
 	mixin(genProperties!T2);
+}
+
+struct MyStruct3 {
+	mixin(genProperties!T3);
 }
 
 class MyClass {
@@ -166,9 +174,6 @@ unittest {
 	assert(removeKeyPostFix(bar) == "Key", removeKeyPostFix(bar));
 }
 
-alias Tuple!(int, "FooBar", float, "Args") T1;
-alias Tuple!(int, "FooBar", float, "Args", string, "Fun", string, "Bar") T2;
-
 string genRangeItemFillImpl(T)(string a) {
 	if(!isToExclude(a)) {
 		return 
@@ -188,8 +193,8 @@ string genRangeItemFillImpl(T)(string a) {
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE3_TEXT) {\n" ~
 			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ 
 				" = to!string(sqlite3_column_text(stmt, i));\n" ~
-			"\t\t\t\t}\n\t\t\t\tbreak;\n" ~
-			"\t\t\t}\n";
+			"\t\t\t\t}\n" ~
+			"\t\t\t}\n\t\t\tbreak;\n";
 	}
 	return "";
 }
@@ -215,7 +220,7 @@ string genRangeItemFill(T)() {
 
 }
 
-pure string prepareInsertStatmentImpl(T)(ref size_t cnt, string a) {
+pure string prepareInsertStatementImpl(T)(ref size_t cnt, string a) {
 	a = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		++cnt;
@@ -224,13 +229,13 @@ pure string prepareInsertStatmentImpl(T)(ref size_t cnt, string a) {
 	return "";
 }
 
-pure string prepareInsertStatmentImpl(T, B...)(ref size_t cnt, string a, B b) {
+pure string prepareInsertStatementImpl(T, B...)(ref size_t cnt, string a, B b) {
 	a = removeKeyPostFix(a);
 	if(!isToExclude(a)) {
 		++cnt;
-		return a ~ ", " ~ prepareInsertStatmentImpl!(T)(cnt, b);	
+		return a ~ ", " ~ prepareInsertStatementImpl!(T)(cnt, b);	
 	}
-	return prepareInsertStatmentImpl!(T)(cnt, b);
+	return prepareInsertStatementImpl!(T)(cnt, b);
 }
 
 pure string prepareAddParameterImpl(T)(string a) {
@@ -264,26 +269,97 @@ pure string prepareAddParameter(T)() {
 
 RemoveStatement prepareRemoveStatement(T)() {
 	size_t comma = T.__keyFieldNames.count(',');
-	string ret = "DELETE FROM " ~ T.stringof ~ " WHERE ";
-	auto sp = T.__keyFieldNames.split(",");
-	bool loopRun = false;
-	foreach(it; sp) {
-		loopRun = true;
-		ret ~= it ~ " = ? AND ";
-	}
-	ret = ret[0 .. loopRun ? $-4 : $] ~ ";";
+	string ret = "DELETE FROM " ~ T.stringof ~ " WHERE " ~
+		prepareWhereSubstring(
+			__traits(allMembers, typeof(T.__someNameYouWontGuess))
+		) ~ ";";
 
 	return RemoveStatement(ret, genRemoveCode!(T)());
 }
 
-//pragma(msg, prepareRemoveStatement!(MyStruct)());
+pure string prepareWhereSubstring(B...)(B b) {
+	string ret;
+	foreach(it; b) {
+		if(!isToExclude(it) && findKeyPostFix(it) != -1) {
+			ret ~= removeKeyPostFix(it) ~ "=? AND ";
+		}
+	}
+	return ret[0 .. (!ret.empty ? $-4 : $)];
+}
 
-alias Tuple!(size_t,string) InsertStatment;
+pure string genUpdateCode(B...)(B b) {
+	string ret;
+	foreach(it; b) {
+		if(!isToExclude(it) && findKeyPostFix(it) == -1) {
+			ret ~= "\t\tstatic if(isIntegral!(typeof(T" ~ 
+				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
+			"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
+			"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
+				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
+			"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
+			"\t\t} else static if(isSomeString!(typeof(T" ~ 
+				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
+			"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~
+			removeKeyPostFix(it) ~ "), to!int(t." ~ 
+				 removeKeyPostFix(it) ~ ".length), SQLITE_STATIC);\n" ~
+			"\t\t} else {\n"
+			"\t\t\tstatic assert(false);\n\t\t}\n";
+		}
+	}
 
-pure InsertStatment prepareInsertStatment(T)() {
+	foreach(it; b) {
+		if(!isToExclude(it) && findKeyPostFix(it) != -1) {
+			ret ~= "\t\tstatic if(isIntegral!(typeof(T" ~ 
+				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
+			"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
+			"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
+				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
+			"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
+			"\t\t} else static if(isSomeString!(typeof(T" ~ 
+				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
+			"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~
+			removeKeyPostFix(it) ~ "), to!int(t." ~ 
+				 removeKeyPostFix(it) ~ ".length), SQLITE_STATIC);\n" ~
+			"\t\t} else {\n"
+			"\t\t\tstatic assert(false);\n\t\t}\n";
+		}
+	}
+
+	return ret;
+}
+
+pure string prepareUpdateSetSubstring(B...)(B b) {
+	string ret;
+	foreach(it; b) {
+		if(!isToExclude(it) && findKeyPostFix(it) == -1) {
+			ret ~= it ~ " = ?, ";
+		}
+	}
+	return ret[0 .. (!ret.empty ? $-2 : $)];
+}
+
+alias Tuple!(string,string) UpdateStatement;
+
+UpdateStatement prepareUpdateStatement(T)() {
+	string ret = "UPDATE " ~ T.stringof ~ " SET " ~
+		prepareUpdateSetSubstring(__traits(allMembers,
+					typeof(T.__someNameYouWontGuess))) ~ " WHERE " ~
+		prepareWhereSubstring(__traits(allMembers,
+					typeof(T.__someNameYouWontGuess))) ~ ";";
+
+	return UpdateStatement(ret, 
+		genUpdateCode(__traits(allMembers, typeof(T.__someNameYouWontGuess))));
+}
+
+//pragma(msg, prepareUpdateStatement!MyStruct3[0]);
+//pragma(msg, prepareUpdateStatement!MyStruct3[1]);
+
+alias Tuple!(size_t,string) InsertStatement;
+
+pure InsertStatement prepareInsertStatement(T)() {
 	size_t cnt = 0;
 	string ret = "INSERT INTO " ~ T.stringof ~ "(";
-	string values = prepareInsertStatmentImpl!(T)(cnt,
+	string values = prepareInsertStatementImpl!(T)(cnt,
 		__traits(allMembers, typeof(T.__someNameYouWontGuess))
 	);
 	ret ~= values[0 .. $-2] ~ ") Values(";
@@ -291,12 +367,12 @@ pure InsertStatment prepareInsertStatment(T)() {
 		ret ~= "?,";
 	}
 	ret ~= "?);";
-	return InsertStatment(cnt,ret);
+	return InsertStatement(cnt,ret);
 }
 
 
 unittest {
-	enum ret = prepareInsertStatment!(MyStruct)();
+	enum ret = prepareInsertStatement!(MyStruct)();
 	assert(ret[0] == 2);
 	//writeln(ret[1]);
 
@@ -349,7 +425,7 @@ struct Sqlite {
 			}
 		}
 	
-		pragma(msg, genRangeItemFill!T);
+		//pragma(msg, genRangeItemFill!T);
 		mixin(genRangeItemFill!T);
 	}
 	private string dbName;
@@ -372,7 +448,7 @@ struct Sqlite {
 
 	UniRange!(T) select(T,string tn = "")(string where = "") {
 		string s = "SELECT * FROM " ~ (tn.empty ? T.stringof : tn) ~ " "
-		~ (where.length == 0 ? "" : where) ~ ";";
+		~ (where.length == 0 ? "" : " WHERE " ~ where) ~ ";";
 		return makeIterator!(T)(s);
 	}
 
@@ -381,7 +457,7 @@ struct Sqlite {
 			&stmt, null
 		);
 		if(rsltCode == SQLITE_ERROR) {
-			throw new Exception("Select Statment:\"" ~
+			throw new Exception("Select Statement:\"" ~
 					stmtStr ~ "\" failed with error:\"" ~
 					to!string(sqlite3_errmsg(db)) ~ "\"");
 		}
@@ -403,10 +479,10 @@ struct Sqlite {
 	}
 
 	void insert(T)(ref T elem) {
-		enum insertStatement = prepareInsertStatment!(T)();
+		enum insertStatement = prepareInsertStatement!(T)();
 		//pragma(msg, insertStatement[1]);
 		insertImpl!(T)(insertStatement, elem, stmt);
-		step(InsertStatment[1]);
+		step(InsertStatement[1]);
 	}
 
 	void insert(R)(R r) if(isForwardRange!R) {
@@ -418,14 +494,14 @@ struct Sqlite {
 	}
 
 	void insertBlank(T)(ref T elem) {
-		enum insertStatement = prepareInsertStatment!(T)();
+		enum insertStatement = prepareInsertStatement!(T)();
 		//pragma(msg, insertStatement[1]);
 		insertImpl!(T)(insertStatement, elem, stmt);
 		step(insertStatement[1]);
 		sqlite3_reset(stmt);
 	}
 
-	void insertImpl(T)(InsertStatment insertStatement, ref T t, 
+	void insertImpl(T)(InsertStatement insertStatement, ref T t, 
 			ref sqlite3_stmt* stmt) {
 		sqlite3_prepare_v2(db, toStringz(insertStatement[1]),
 			to!int(insertStatement[1].length), &stmt, null
@@ -451,8 +527,22 @@ struct Sqlite {
 		);
 		mixin(removeStmt[1]);
 		step(removeStmt[0]);
-		
 	}
+
+	void update(T)(ref T elem) {
+		updateImpl!(T)(elem);
+	}
+
+	void updateImpl(T)(ref T t) {
+		enum updateStmt = prepareUpdateStatement!(T)();
+		int i = 0;
+		sqlite3_prepare_v2(db, toStringz(updateStmt[0]),
+			to!int(updateStmt[0].length), &stmt, null
+		);
+		mixin(updateStmt[1]);
+		step(updateStmt[0]);
+	}
+
 	void step(string stmtStr) {
 		if(sqlite3_step(stmt) != SQLITE_DONE) {
 			throw new Error(stmtStr ~ " " ~

@@ -82,6 +82,12 @@ void main() {
 		}
 	}
 	db.endTransaction();
+	toDel.Zip = "1337";
+	db.update(toDel);
+	foreach(it; db.select!Person("Firstname = \"" ~ toDel.Firstname 
+			~ "\" AND Lastname = \"" ~ toDel.Lastname ~ "\"")) {
+		writeln(it);
+	}
 	db.remove(toDel);
 	writeln(toDel);
 
