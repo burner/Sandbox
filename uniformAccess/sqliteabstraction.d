@@ -56,7 +56,7 @@ string genProImpl(T, B...)(string a, B b) {
 string genProperties(T)() {
 	return T.stringof ~ " __someNameYouWontGuess;\n"
 		~ genProImpl!(T)(__traits(allMembers, T)) ~ "\n" ~
-		"immutable(string) __keyFieldNames = " ~ 
+		"static immutable(string) __keyFieldNames = " ~ 
 		'\"' ~ genKeyNames!(T)(__traits(allMembers, T)) ~ "\";\n";
 }
 
@@ -120,7 +120,7 @@ unittest {
 }
 
 pure int findKeyPostFix(string str) {
-	immutable string key = "_Key";
+	static immutable string key = "_Key";
 	return cast(int)(str.length < 4 ? 
 		- 1 : (str[$-4 .. $] == key) ? str.length -4 : -1);
 }
@@ -139,8 +139,8 @@ pure string genRemoveCodeImpl(T)(string a) {
 		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
 		"\t\t} else static if(isSomeString!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
-			 aK ~ ".length), SQLITE_STATIC);\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ 
+		"), to!int(t." ~ aK ~ ".length), SQLITE_STATIC);\n" ~
 		"\t\t} else {\n"
 		"\t\t\tstatic assert(false);\n\t\t}\n";
 	}
@@ -158,7 +158,7 @@ pure string genRemoveCode(T)() {
 }
 
 pure string removeKeyPostFix(string str) {
-	immutable string key = "_Key";
+	static immutable string key = "_Key";
 	int idx = findKeyPostFix(str);
 	if(idx != -1 && idx != 0) {
 		return str[0 .. idx];	
@@ -167,7 +167,7 @@ pure string removeKeyPostFix(string str) {
 }
 
 unittest {
-	immutable string foo = "Firstname_Key";
+	static immutable string foo = "Firstname_Key";
 	static assert(removeKeyPostFix(foo) == "Firstname", removeKeyPostFix(foo));
 
 	immutable string bar = "Key";
@@ -181,13 +181,13 @@ string genRangeItemFillImpl(T)(string a) {
 			"\t\t\tstatic if(isIntegral!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_INTEGER) {\n" ~
-			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_int(stmt, i);\n" ~
-			"\t\t\t\t}\n" ~
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ 
+			" = sqlite3_column_int(stmt, i);\n" ~ "\t\t\t\t}\n" ~
 			"\t\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE_FLOAT) {\n" ~
-			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ " = sqlite3_column_double(stmt, i);\n" ~
-			"\t\t\t\t}\n" ~
+			"\t\t\t\t\tret." ~ removeKeyPostFix(a) ~ 
+			" = sqlite3_column_double(stmt, i);\n" ~ "\t\t\t\t}\n" ~
 			"\t\t\t} else static if(isSomeString!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
 			"\t\t\t\tif(sqlite3_column_type(stmt, i) == SQLITE3_TEXT) {\n" ~
@@ -249,8 +249,8 @@ pure string prepareAddParameterImpl(T)(string a) {
 		"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ aK ~ ");\n" ~
 		"\t\t} else static if(isSomeString!(typeof(T" ~ 
 			".__someNameYouWontGuess." ~ a ~ "))) {\n" ~
-		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ "), to!int(t." ~ 
-			 aK ~ ".length), SQLITE_STATIC);\n" ~
+		"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~ aK ~ 
+		"), to!int(t." ~ aK ~ ".length), SQLITE_STATIC);\n" ~
 		"\t\t} else {\n"
 		"\t\t\tstatic assert(false);\n\t\t}\n";
 	}
@@ -293,11 +293,11 @@ pure string genUpdateCode(B...)(B b) {
 		if(!isToExclude(it) && findKeyPostFix(it) == -1) {
 			ret ~= "\t\tstatic if(isIntegral!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
-			"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
-			"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
+			"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ removeKeyPostFix(it) ~ 
+			");\n" ~ "\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
-			"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
-			"\t\t} else static if(isSomeString!(typeof(T" ~ 
+			"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ removeKeyPostFix(it) ~ 
+			");\n" ~ "\t\t} else static if(isSomeString!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
 			"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~
 			removeKeyPostFix(it) ~ "), to!int(t." ~ 
@@ -311,11 +311,11 @@ pure string genUpdateCode(B...)(B b) {
 		if(!isToExclude(it) && findKeyPostFix(it) != -1) {
 			ret ~= "\t\tstatic if(isIntegral!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
-			"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
-			"\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
+			"\t\t\tsqlite3_bind_int(stmt, i++, t." ~ removeKeyPostFix(it) ~ 
+			");\n" ~ "\t\t} else static if(isFloatingPoint!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
-			"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ removeKeyPostFix(it) ~ ");\n" ~
-			"\t\t} else static if(isSomeString!(typeof(T" ~ 
+			"\t\t\tsqlite3_bind_double(stmt, i++, t." ~ removeKeyPostFix(it) 
+			~ ");\n" ~ "\t\t} else static if(isSomeString!(typeof(T" ~ 
 				".__someNameYouWontGuess." ~ it ~ "))) {\n" ~
 			"\t\t\tsqlite3_bind_text(stmt, i++, toStringz(t." ~
 			removeKeyPostFix(it) ~ "), to!int(t." ~ 
