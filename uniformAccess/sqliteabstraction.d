@@ -6,6 +6,7 @@ import std.stdio;
 import std.typecons;
 import std.traits;
 import std.conv;
+import std.range;
 import std.string;
 
 import etc.c.sqlite3;
@@ -443,6 +444,7 @@ struct Sqlite {
 	}
 
 	~this() {
+		writeln("closing");
 		sqlite3_close(db);
 	}
 
@@ -464,6 +466,13 @@ struct Sqlite {
 		return UniRange!(T)(stmt, rsltCode);
 	}
 
+	void finalize() {
+		if(sqlite3_finalize(stmt) != SQLITE_OK) {
+			throw new Error("failed with error:\"" ~
+					to!string(sqlite3_errmsg(db)) ~ "\"");
+		}
+	}
+
 	void beginTransaction() {
 		char* errorMessage;
 		sqlite3_exec(db, "BEGIN TRANSACTION", null, null, &errorMessage);
@@ -472,17 +481,15 @@ struct Sqlite {
 	void endTransaction() {
 		char* errorMessage;
 		sqlite3_exec(db, "COMMIT TRANSACTION", null, null, &errorMessage);
-		if(sqlite3_finalize(stmt) != SQLITE_OK) {
-			throw new Error("failed with error:\"" ~
-					to!string(sqlite3_errmsg(db)) ~ "\"");
-		}
+		finalize();
 	}
 
 	void insert(T)(ref T elem) {
 		enum insertStatement = prepareInsertStatement!(T)();
-		//pragma(msg, insertStatement[1]);
+		pragma(msg, insertStatement[1]);
 		insertImpl!(T)(insertStatement, elem, stmt);
-		step(InsertStatement[1]);
+		step(insertStatement[1]);
+		finalize();
 	}
 
 	void insert(R)(R r) if(isForwardRange!R) {
@@ -517,6 +524,7 @@ struct Sqlite {
 
 	void remove(T)(ref T elem) {
 		removeImpl!(T)(elem);
+		finalize();
 	}
 
 	void removeImpl(T)(ref T t) {
@@ -531,6 +539,7 @@ struct Sqlite {
 
 	void update(T)(ref T elem) {
 		updateImpl!(T)(elem);
+		finalize();
 	}
 
 	void updateImpl(T)(ref T t) {
