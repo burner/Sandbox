@@ -40,7 +40,7 @@ const LUA_IDSIZE = 60;
 
 /* mark for precompiled code ('<esc>Lua') */
 //const LUA_SIGNATURE	"\033Lua";
-const char* LUA_SIGNATURE =	"Lua";
+const(char)* LUA_SIGNATURE =	"Lua";
 
 /* option for multiple returns in 'lua_pcall' and 'lua_call' */
 const int LUA_MULTRET=	-1;
@@ -75,7 +75,7 @@ alias int function(lua_State *L) lua_CFunction;
 /*
 ** functions that read/write blocks when loading/dumping Lua chunks
 */
-alias const char * function(lua_State *L, void *ud, size_t *sz) lua_Reader ;
+alias const(char) * function(lua_State *L, void *ud, size_t *sz) lua_Reader ;
 
 alias int function(lua_State *L, const void* p, size_t sz, void* ud) lua_Writer;
 
@@ -138,7 +138,7 @@ alias LUA_UNSIGNED lua_Unsigned;
 /*
 ** RCS ident string
 */
-//extern const char lua_ident[];
+//extern const(char) lua_ident[];
 
 
 /*
@@ -151,9 +151,9 @@ extern(C)
 extern(C) lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);
 extern(C) 
 extern(C) 
-extern(C) const lua_Number * lua_version (lua_State *L);
+extern(C) const(lua_Number) * lua_version (lua_State *L);
 
-extern(C) lua_State* luaL_newstate();
+//extern(C) lua_State* luaL_newstate();
 
 
 /*
@@ -181,18 +181,18 @@ extern(C) int             lua_isstring(lua_State *L, int idx);
 extern(C) int             lua_iscfunction(lua_State *L, int idx);
 extern(C) int             lua_isuserdata(lua_State *L, int idx);
 extern(C) int             lua_type(lua_State *L, int idx);
-extern(C) const char     *lua_typename(lua_State *L, int tp);
+extern(C) const(char)     *lua_typename(lua_State *L, int tp);
 
 extern(C) lua_Number      lua_tonumberx(lua_State *L, int idx, int *isnum);
 extern(C) lua_Integer     lua_tointegerx(lua_State *L, int idx, int *isnum);
 extern(C) lua_Unsigned    lua_tounsignedx(lua_State *L, int idx, int *isnum);
 extern(C) int             lua_toboolean(lua_State *L, int idx);
-extern(C) const char     *lua_tolstring(lua_State *L, int idx, size_t *len);
+extern(C) const(char)     *lua_tolstring(lua_State *L, int idx, size_t *len);
 extern(C) size_t          lua_rawlen(lua_State *L, int idx);
 extern(C) lua_CFunction   lua_tocfunction(lua_State *L, int idx);
 extern(C) void	       *lua_touserdata(lua_State *L, int idx);
 extern(C) lua_State      *lua_tothread(lua_State *L, int idx);
-extern(C) const void     *lua_topointer(lua_State *L, int idx);
+extern(C) const(void)     *lua_topointer(lua_State *L, int idx);
 
 
 /*
@@ -224,12 +224,12 @@ extern(C) void         lua_pushnil(lua_State *L);
 extern(C) void         lua_pushnumber(lua_State *L, lua_Number n);
 extern(C) void         lua_pushinteger(lua_State *L, lua_Integer n);
 extern(C) void         lua_pushunsigned(lua_State *L, lua_Unsigned n);
-extern(C) const char * lua_pushlstring(lua_State *L, const char *s, size_t l);
-extern(C) const char * lua_pushstring(lua_State *L, const char *s);
-extern(C) const char * lua_pushvfstring(lua_State *L, const char *fmt, va_list
+extern(C) const(char) * lua_pushlstring(lua_State *L, const(char) *s, size_t l);
+extern(C) const(char) * lua_pushstring(lua_State *L, const(char) *s);
+extern(C) const(char) * lua_pushvfstring(lua_State *L, const(char) *fmt, va_list
 		argp);
 
-extern(C) const char * lua_pushfstring(lua_State *L, const char *fmt, ...);
+extern(C) const(char) * lua_pushfstring(lua_State *L, const(char) *fmt, ...);
 extern(C) void  lua_pushcclosure(lua_State *L, lua_CFunction fn, int n);
 extern(C) void  lua_pushboolean(lua_State *L, int b);
 extern(C) void  lua_pushlightuserdata(lua_State *L, void *p);
@@ -239,9 +239,9 @@ extern(C) int   lua_pushthread(lua_State *L);
 /*
 ** get functions (Lua -> stack)
 */
-extern(C) void   lua_getglobal(lua_State *L, const char *var);
+extern(C) void   lua_getglobal(lua_State *L, const(char) *var);
 extern(C) void   lua_gettable(lua_State *L, int idx);
-extern(C) void   lua_getfield(lua_State *L, int idx, const char *k);
+extern(C) void   lua_getfield(lua_State *L, int idx, const(char) *k);
 extern(C) void   lua_rawget(lua_State *L, int idx);
 extern(C) void   lua_rawgeti(lua_State *L, int idx, int n);
 extern(C) void   lua_rawgetp(lua_State *L, int idx, const void *p);
@@ -254,9 +254,9 @@ extern(C) void   lua_getuservalue(lua_State *L, int idx);
 /*
 ** set functions (stack -> Lua)
 */
-extern(C) void  lua_setglobal(lua_State *L, const char *var);
+extern(C) void  lua_setglobal(lua_State *L, const(char) *var);
 extern(C) void  lua_settable(lua_State *L, int idx);
-extern(C) void  lua_setfield(lua_State *L, int idx, const char *k);
+extern(C) void  lua_setfield(lua_State *L, int idx, const(char) *k);
 extern(C) void  lua_rawset(lua_State *L, int idx);
 extern(C) void  lua_rawseti(lua_State *L, int idx, int n);
 extern(C) void  lua_rawsetp(lua_State *L, int idx, const void *p);
@@ -285,8 +285,8 @@ int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc) {
 }
 
 extern(C) int   lua_load(lua_State *L, lua_Reader reader, void *dt,
-                                        const char *chunkname,
-                                        const char *mode);
+                                        const(char) *chunkname,
+                                        const(char) *mode);
 
 extern(C) int lua_dump(lua_State *L, lua_Writer writer, void *data);
 
@@ -371,7 +371,7 @@ void lua_newtable(lua_State *L) {
 }
 
 //#define lua_register(L,n,f) (lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
-void lua_register(lua_State *L, lua_CFunction f, const char *var) {
+void lua_register(lua_State *L, lua_CFunction f, const(char) *var) {
 	lua_pushcfunction(L, f);
 	lua_setglobal(L, var);
 }
@@ -417,7 +417,7 @@ bool lua_isnoneornul(lua_State *L, int idx) {
 
 //#define lua_pushliteral(L, s)	\
 //	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
-const char* lua_pushliteral(lua_State *L, const char* s) {
+const(char)* lua_pushliteral(lua_State *L, const(char)* s) {
 	return lua_pushlstring(L, s, strlen(s));
 }
 
@@ -428,7 +428,7 @@ void lua_pushglobaltable(lua_State *L) {
 }
 
 //#define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
-const char* lua_tostring(lua_State *L, int idx) {
+const(char)* lua_tostring(lua_State *L, int idx) {
 	return lua_tolstring(L, idx, null);
 }
 
@@ -466,11 +466,11 @@ alias void function(lua_State *L, lua_Debug *ar) lua_Hook;
 
 
 extern(C) int lua_getstack(lua_State *L, int level, lua_Debug *ar);
-extern(C) int lua_getinfo(lua_State *L, const char *what, lua_Debug *ar);
-extern(C) const char * lua_getlocal(lua_State *L, const lua_Debug *ar, int n);
-extern(C) const char * lua_setlocal(lua_State *L, const lua_Debug *ar, int n);
-extern(C) const char * lua_getupvalue(lua_State *L, int funcindex, int n);
-extern(C) const char * lua_setupvalue(lua_State *L, int funcindex, int n);
+extern(C) int lua_getinfo(lua_State *L, const(char) *what, lua_Debug *ar);
+extern(C) const(char) * lua_getlocal(lua_State *L, const lua_Debug *ar, int n);
+extern(C) const(char) * lua_setlocal(lua_State *L, const lua_Debug *ar, int n);
+extern(C) const(char) * lua_getupvalue(lua_State *L, int funcindex, int n);
+extern(C) const(char) * lua_setupvalue(lua_State *L, int funcindex, int n);
 
 extern(C) void * lua_upvalueid(lua_State *L, int fidx, int n);
 extern(C) void  lua_upvaluejoin(lua_State *L, int fidx1, int n1, int fidx2,
@@ -484,10 +484,10 @@ extern(C) int lua_gethookcount(lua_State *L);
 
 struct lua_Debug {
   int event;
-  const char *name;	/* (n) */
-  const char *namewhat;	/* (n) 'global', 'local', 'field', 'method' */
-  const char *what;	/* (S) 'Lua', 'C', 'main', 'tail' */
-  const char *source;	/* (S) */
+  const(char) *name;	/* (n) */
+  const(char) *namewhat;	/* (n) 'global', 'local', 'field', 'method' */
+  const(char) *what;	/* (S) 'Lua', 'C', 'main', 'tail' */
+  const(char) *source;	/* (S) */
   int currentline;	/* (l) */
   int linedefined;	/* (S) */
   int lastlinedefined;	/* (S) */

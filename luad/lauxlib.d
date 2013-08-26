@@ -1,5 +1,7 @@
 module lauxlib;
 
+import std.conv;
+import std.string;
 import core.stdc.stdio;
 
 alias BUFSIZ LUAL_BUFFERSIZE;
@@ -25,8 +27,13 @@ import lua;
 
 
 struct luaL_Reg {
-  const char *name;
+  const(char) *name;
   lua_CFunction func;
+
+  this(string n, lua_CFunction f) {
+	  name = toStringz(n);
+	  func = f;
+  }
 }
 
 
@@ -35,14 +42,14 @@ struct luaL_Reg {
 
 
 extern(C) {
-int luaL_getmetafield(lua_State *L, int obj, const char *e);
-int luaL_callmeta(lua_State *L, int obj, const char *e);
-const char * luaL_tolstring(lua_State *L, int idx, size_t *len);
-int luaL_argerror(lua_State *L, int numarg, const char *extramsg);
-const char * luaL_checklstring(lua_State *L, int numArg,
+int luaL_getmetafield(lua_State *L, int obj, const(char) *e);
+int luaL_callmeta(lua_State *L, int obj, const(char) *e);
+const(char) * luaL_tolstring(lua_State *L, int idx, size_t *len);
+int luaL_argerror(lua_State *L, int numarg, const(char) *extramsg);
+const(char) * luaL_checklstring(lua_State *L, int numArg,
                                                 size_t *l);
-const char * luaL_optlstring(lua_State *L, int numArg,
-                                const char *def, size_t *l);
+const(char) * luaL_optlstring(lua_State *L, int numArg,
+                                const(char) *def, size_t *l);
 lua_Number luaL_checknumber(lua_State *L, int numArg);
 lua_Number luaL_optnumber(lua_State *L, int nArg, lua_Number def);
 
@@ -51,22 +58,22 @@ lua_Integer luaL_optinteger(lua_State *L, int nArg, lua_Integer def);
 lua_Unsigned luaL_checkunsigned(lua_State *L, int numArg);
 lua_Unsigned luaL_optunsigned(lua_State *L, int numArg, lua_Unsigned def);
 
-void luaL_checkstack(lua_State *L, int sz, const char *msg);
+void luaL_checkstack(lua_State *L, int sz, const(char) *msg);
 void luaL_checktype(lua_State *L, int narg, int t);
 void luaL_checkany(lua_State *L, int narg);
 
-int    luaL_newmetatable(lua_State *L, const char *tname);
-void   luaL_setmetatable(lua_State *L, const char *tname);
-void * luaL_testudata(lua_State *L, int ud, const char *tname);
-void * luaL_checkudata(lua_State *L, int ud, const char *tname);
+int    luaL_newmetatable(lua_State *L, const(char) *tname);
+void   luaL_setmetatable(lua_State *L, const(char) *tname);
+void * luaL_testudata(lua_State *L, int ud, const(char) *tname);
+void * luaL_checkudata(lua_State *L, int ud, const(char) *tname);
 
 void luaL_where(lua_State *L, int lvl);
-int luaL_error(lua_State *L, const char *fmt, ...);
+int luaL_error(lua_State *L, const(char) *fmt, ...);
 
-int luaL_checkoption(lua_State *L, int narg, const char *def,
-                                   const char** lst);
+int luaL_checkoption(lua_State *L, int narg, const(char) *def,
+                                   const(char)** lst);
 
-int luaL_fileresult(lua_State *L, int stat, const char *fname);
+int luaL_fileresult(lua_State *L, int stat, const(char) *fname);
 int luaL_execresult(lua_State *L, int stat);
 }
 
@@ -80,32 +87,32 @@ extern(C) {
 int luaL_ref(lua_State *L, int t);
 void luaL_unref(lua_State *L, int t, int re);
 
-int luaL_loadfilex(lua_State *L, const char *filename, const char *mode);
+int luaL_loadfilex(lua_State *L, const(char) *filename, const(char) *mode);
 }
 
 //#define luaL_loadfile(L,f)	luaL_loadfilex(L,f,NULL)
-int luaL_loadfile(lua_State *L, const char* filename) {
+int luaL_loadfile(lua_State *L, const(char)* filename) {
 	return luaL_loadfilex(L, filename, null);
 }
 
 extern(C) {
-int luaL_loadbufferx(lua_State *L, const char *buff, size_t sz,
-                                   const char *name, const char *mode);
-int luaL_loadstring(lua_State *L, const char *s);
+int luaL_loadbufferx(lua_State *L, const(char) *buff, size_t sz,
+                                   const(char) *name, const(char) *mode);
+int luaL_loadstring(lua_State *L, const(char) *s);
 
 lua_State * luaL_newstate();
 
 int luaL_len(lua_State *L, int idx);
 
-const char * luaL_gsub(lua_State *L, const char *s, const char *p, const char *r);
+const(char) * luaL_gsub(lua_State *L, const(char) *s, const(char) *p, const(char) *r);
 
 void luaL_setfuncs(lua_State *L, const luaL_Reg *l, int nup);
 
-int luaL_getsubtable(lua_State *L, int idx, const char *fname);
+int luaL_getsubtable(lua_State *L, int idx, const(char) *fname);
 
-void luaL_traceback(lua_State *L, lua_State *L1, const char *msg, int level);
+void luaL_traceback(lua_State *L, lua_State *L1, const(char) *msg, int level);
 
-void luaL_requiref(lua_State *L, const char *modname, lua_CFunction openf, int glb);
+void luaL_requiref(lua_State *L, const(char) *modname, lua_CFunction openf, int glb);
 
 /*
 ** ===============================================================
@@ -216,8 +223,8 @@ void luaL_addsize(luaL_Buffer* B, int n) { B.p += n; }
 
 void luaL_buffinit(lua_State *L, luaL_Buffer *B);
 char * luaL_prepbuffsize(luaL_Buffer *B, size_t sz);
-void luaL_addlstring(luaL_Buffer *B, const char *s, size_t l);
-void luaL_addstring(luaL_Buffer *B, const char *s);
+void luaL_addlstring(luaL_Buffer *B, const(char) *s, size_t l);
+void luaL_addstring(luaL_Buffer *B, const(char) *s);
 void luaL_addvalue(luaL_Buffer *B);
 void luaL_pushresult(luaL_Buffer *B);
 void luaL_pushresultsize(luaL_Buffer *B, size_t sz);
@@ -258,14 +265,14 @@ struct luaL_Stream {
 /* compatibility with old module system */
 //#if defined(LUA_COMPAT_MODULE)
 
-void luaL_pushmodule(lua_State *L, const char *modname,
+void luaL_pushmodule(lua_State *L, const(char)* modname,
                                    int sizehint);
-void luaL_openlib(lua_State *L, const char *libname,
+void luaL_openlib(lua_State *L, const(char) *libname,
                                 const luaL_Reg* l, int nup);
 }
 
 //#define luaL_register(L,n,l)	(luaL_openlib(L,(n),(l),0))
-void luaL_register(lua_State* L, const char* n, const luaL_Reg* l) {
+void luaL_register(lua_State* L, const(char)* n, const luaL_Reg* l) {
 	luaL_openlib(L, n, l, 0);
 }
 
