@@ -280,8 +280,8 @@ extern(C) int   lua_pcallk(lua_State *L, int nargs, int nresults, int errfunc,
                             int ctx, lua_CFunction k);
 
 //#define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
-void lua_pcall(lua_State *L, int nargs, int nresults, int errfunc) {
-	lua_pcallk(L, nargs, nresults, errfunc, 0, null);
+int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc) {
+	return lua_pcallk(L, nargs, nresults, errfunc, 0, null);
 }
 
 extern(C) int   lua_load(lua_State *L, lua_Reader reader, void *dt,
