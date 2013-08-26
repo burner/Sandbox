@@ -153,6 +153,8 @@ extern(C)
 extern(C) 
 extern(C) const lua_Number * lua_version (lua_State *L);
 
+extern(C) lua_State* luaL_newstate();
+
 
 /*
 ** basic stack manipulation

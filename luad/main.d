@@ -2,5 +2,5 @@ import lua;
 
 void main() {
 	lua_State *lua_state;
-	lua_state = lua_newstate();
+	lua_state = luaL_newstate();
 }
