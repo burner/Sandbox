@@ -94,6 +94,7 @@ void run(string names, int id) {
 				GC.free(entries.ptr);
 				GC.collect();
 				GC.minimize();
+				db.releaseMemory();
 				entries = new Entry[entrySize];
 				idx = 0;
 			}

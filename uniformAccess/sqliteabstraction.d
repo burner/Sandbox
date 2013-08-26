@@ -436,9 +436,11 @@ struct Sqlite {
 	this(string dbn) { 
 		this.dbName = dbn;
 		int rc = sqlite3_open(toStringz(dbName), &db);
+		auto sql_err_msg = sqlite3_errmsg(db);
+		//scope(exit) sqlite3_free(cast(void*)sql_err_msg);
 		if(rc) {
 			throw new Error("Can't open database " 
-				~ dbName ~ " because of " ~ to!string(sqlite3_errmsg(db))
+				~ dbName ~ " because of " ~ to!string(sql_err_msg)
 			);
 		}
 	}
@@ -448,6 +450,14 @@ struct Sqlite {
 		sqlite3_close(db);
 	}
 
+	extern(C) {
+		int sqlite3_db_release_memory(sqlite3*);
+	}
+
+	int releaseMemory() {
+		return sqlite3_release_memory(1024*1024*1024);
+	}
+
 	UniRange!(T) select(T,string tn = "")(string where = "") {
 		string s = "SELECT * FROM " ~ (tn.empty ? T.stringof : tn) ~ " "
 		~ (where.length == 0 ? "" : " WHERE " ~ where) ~ ";";
@@ -455,32 +465,39 @@ struct Sqlite {
 	}
 
 	UniRange!(T) makeIterator(T)(string stmtStr) {
+		sqlite3_stmt* s;
  		int rsltCode = sqlite3_prepare(db, toStringz(stmtStr), -1, 
-			&stmt, null
+			&s, null
 		);
+		auto sql_err_msg = sqlite3_errmsg(db);
+		//scope(exit) sqlite3_free(cast(void*)sql_err_msg);
 		if(rsltCode == SQLITE_ERROR) {
 			throw new Exception("Select Statement:\"" ~
 					stmtStr ~ "\" failed with error:\"" ~
-					to!string(sqlite3_errmsg(db)) ~ "\"");
+					to!string(sql_err_msg) ~ "\"");
 		}
-		return UniRange!(T)(stmt, rsltCode);
+		return UniRange!(T)(s, rsltCode);
 	}
 
 	void finalize() {
+		auto sql_err_msg = sqlite3_errmsg(db);
+		//scope(exit) sqlite3_free(cast(void*)sql_err_msg);
 		if(sqlite3_finalize(stmt) != SQLITE_OK) {
 			throw new Error("failed with error:\"" ~
-					to!string(sqlite3_errmsg(db)) ~ "\"");
+					to!string(sql_err_msg) ~ "\"");
 		}
 	}
 
 	void beginTransaction() {
 		char* errorMessage;
 		sqlite3_exec(db, "BEGIN TRANSACTION", null, null, &errorMessage);
+		sqlite3_free(errorMessage);
 	}
 
 	void endTransaction() {
 		char* errorMessage;
 		sqlite3_exec(db, "COMMIT TRANSACTION", null, null, &errorMessage);
+		sqlite3_free(errorMessage);
 		finalize();
 	}
 
@@ -553,9 +570,11 @@ struct Sqlite {
 	}
 
 	void step(string stmtStr) {
+		auto sql_err_msg = sqlite3_errmsg(db);
+		//scope(exit) sqlite3_free(cast(void*)sql_err_msg);
 		if(sqlite3_step(stmt) != SQLITE_DONE) {
 			throw new Error(stmtStr ~ " " ~
-					to!string(sqlite3_errmsg(db)));
+					to!string(sql_err_msg));
 		}
 	}
 
