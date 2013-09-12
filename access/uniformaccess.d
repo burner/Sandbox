@@ -249,8 +249,8 @@ private string genUpdateParameterMixinString(T)() {
 	return ret;
 }
 
-pragma(msg, genUpdateStatement!Data());
-pragma(msg, genUpdateParameterMixinString!Data());
+//pragma(msg, genUpdateStatement!Data());
+//pragma(msg, genUpdateParameterMixinString!Data());
 
 // select
 
@@ -318,12 +318,12 @@ public:
 				if(sqlRsltCode == SQLITE_ROW) {
 					this.currentItem = buildItem!T();
 				} else {
-					writeln(sqlRsltCode);
+					//writeln(sqlRsltCode);
 					done = true;
 					sqlite3_finalize(stmt);
 				}
 			} else {
-				writeln(sqlRsltCode);
+				//writeln(sqlRsltCode);
 				done = true;
 				sqlite3_finalize(stmt);
 			}
@@ -383,7 +383,7 @@ public:
 		string s = "SELECT * FROM " ~ tn ~ 
 			(where.length == 0 ? "" : " WHERE " ~
 			 checkForDeleteAndInsertDropExpr(where)) ~ ";";
-		writeln(s);
+		//writeln(s);
 		return makeIterator!(T)(s);
 	}
 
@@ -442,7 +442,7 @@ public:
 				to!string(sqlite3_errmsg(db))
 			);
 		}
-		int i = 0;	
+		int i = 0;
 		mixin(genRemoveParameterMixinString!T());
 
 		if(sqlite3_step(stmt) != SQLITE_DONE) {
@@ -456,6 +456,27 @@ public:
 
 	// Update
 	void update(T)(ref T t) {
+		sqlite3_stmt* stmt;
+		enum updateStmt = genUpdateStatement!T();
+		int errCode = sqlite3_prepare_v2(db, toStringz(updateStmt),
+			to!int(updateStmt.length), &stmt, null
+		);
+		if(errCode != SQLITE_OK) {
+			scope(exit) sqlite3_finalize(stmt);
+			throw new Exception(updateStmt ~ " FAILED " ~
+				to!string(sqlite3_errmsg(db))
+			);
+		}
+		int i = 0;
+		mixin(genUpdateParameterMixinString!T());
+
+		if(sqlite3_step(stmt) != SQLITE_DONE) {
+			scope(exit) sqlite3_finalize(stmt);
+			throw new Exception(to!string(sqlite3_errmsg(db)) ~ " " ~
+				updateStmt ~ " " ~ to!string(t)
+			);
+		}
+		sqlite3_finalize(stmt);
 	}
 
 	// Helper
