@@ -293,6 +293,41 @@ string genRangeItemFill(T)() {
 	return ret;
 }
 
+// Create Table
+
+private string sqliteTypeNameFromType(T)(string[2] a) {
+	return 
+	"\"static if(isIntegral!(typeof(T." ~ a[1] ~ "))) {" ~
+		"createTableStmt ~= \"" ~ a[0] ~ " INTEGER,\";" ~
+	"} else static if(isFloatingPoint!(typeof(T." ~ a[1] ~ "))) {" ~
+		"createTableStmt ~= \"" ~ a[0] ~ " FLOAT,\";" ~
+	"} else static if(isSomeString!(typeof(T." ~ a[1] ~ "))) {" ~
+		"createTableStmt ~= \"" ~ a[0] ~ " STRING,\";" ~
+	"}\"";
+}
+
+/*private string nameTypeString(T)(string[2][] c) {
+	if(c.length == 1) {
+		return genCreateTableStatement!(T,c[0][1]);
+	} else {
+		return genCreateTableStatement!(T,c[0][1]) ~ ", " ~ 
+			nameTypeString!(T)(c[1 ..  $]);
+	}
+}*/
+
+private string genCreateTableStatement(T)() {
+	enum member = extractMemberNames!T();
+	string tableName = getTableNameOfAggregation!T();
+	string ret = "\"string createTableStmt = \"CREATE TABLE " ~ tableName ~ "(\";";
+	foreach(it; member) {
+		ret ~= sqliteTypeNameFromType!(T)(it);
+	}
+	ret ~= "createTableStmt = createTableStmt[0 .. $-1] ~ \";\"\"";
+	return ret;
+}
+
+pragma(msg, genCreateTableStatement!Data());
+
 // Sqlite object
 
 struct Sqlite {
@@ -479,6 +514,11 @@ public:
 		sqlite3_finalize(stmt);
 	}
 
+	// Create
+	void createTable(T)() {
+		mixin(genCreateTableStatement!T());
+	}
+
 	// Helper
 
 	void step(sqlite3_stmt* stmt) {
@@ -530,6 +570,7 @@ public:
 
 void main() {
 	auto db = Sqlite("googleTable2.db");
+	db.createTable!Data();
 	//auto ran = db.select!StockEntry("Symbol = \"AAPL\"");
 	auto ran = db.select!StockEntry();
 	/*foreach(it; filter!(a => a.date > 1377892860 && a.open > 511.0)(ran)) {
