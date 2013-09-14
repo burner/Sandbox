@@ -297,13 +297,13 @@ string genRangeItemFill(T)() {
 
 private string sqliteTypeNameFromType(T)(string[2] a) {
 	return 
-	"\"static if(isIntegral!(typeof(T." ~ a[1] ~ "))) {" ~
-		"createTableStmt ~= \"" ~ a[0] ~ " INTEGER,\";" ~
-	"} else static if(isFloatingPoint!(typeof(T." ~ a[1] ~ "))) {" ~
-		"createTableStmt ~= \"" ~ a[0] ~ " FLOAT,\";" ~
-	"} else static if(isSomeString!(typeof(T." ~ a[1] ~ "))) {" ~
-		"createTableStmt ~= \"" ~ a[0] ~ " STRING,\";" ~
-	"}\"";
+	"static if(isIntegral!(typeof(T." ~ a[1] ~ "))) {\n" ~
+		"createTableStmt ~= \"" ~ a[0] ~ " INTEGER,\";\n" ~
+	"} else static if(isFloatingPoint!(typeof(T." ~ a[1] ~ "))) {\n" ~
+		"createTableStmt ~= \"" ~ a[0] ~ " FLOAT,\";\n" ~
+	"} else static if(isSomeString!(typeof(T." ~ a[1] ~ "))) {\n" ~
+		"createTableStmt ~= \"" ~ a[0] ~ " STRING,\";\n" ~
+	"}\n";
 }
 
 /*private string nameTypeString(T)(string[2][] c) {
@@ -318,11 +318,17 @@ private string sqliteTypeNameFromType(T)(string[2] a) {
 private string genCreateTableStatement(T)() {
 	enum member = extractMemberNames!T();
 	string tableName = getTableNameOfAggregation!T();
-	string ret = "\"string createTableStmt = \"CREATE TABLE " ~ tableName ~ "(\";";
+	string[] keys = extractPrimaryKeyNames!T();
+	string ret = "string createTableStmt = \"CREATE TABLE " ~ tableName ~ "(\";\n";
 	foreach(it; member) {
 		ret ~= sqliteTypeNameFromType!(T)(it);
 	}
-	ret ~= "createTableStmt = createTableStmt[0 .. $-1] ~ \";\"\"";
+	//ret ~= sqliteTypeNameFromType!(T)(member[0]);
+	ret ~= "createTableStmt = createTableStmt[0 .. $-1] ~ \" Primary Key(";
+	foreach(key; keys) {
+		ret ~= key ~ ",";
+	}
+	ret = ret[0 .. $-1] ~ "));\";";
 	return ret;
 }
 
@@ -516,7 +522,24 @@ public:
 
 	// Create
 	void createTable(T)() {
+		sqlite3_stmt* stmt;
 		mixin(genCreateTableStatement!T());
+		int errCode = sqlite3_prepare_v2(db, toStringz(createTableStmt),
+			to!int(createTableStmt.length), &stmt, null
+		);
+		if(errCode != SQLITE_OK) {
+			scope(exit) sqlite3_finalize(stmt);
+			throw new Exception(createTableStmt ~ " FAILED " ~
+				to!string(sqlite3_errmsg(db))
+			);
+		}
+		if(sqlite3_step(stmt) != SQLITE_DONE) {
+			scope(exit) sqlite3_finalize(stmt);
+			throw new Exception(to!string(sqlite3_errmsg(db)) ~ " " ~
+				createTableStmt
+			);
+		}
+		sqlite3_finalize(stmt);
 	}
 
 	// Helper
@@ -585,4 +608,5 @@ void main() {
 	se.low = 518.0;
 	se.volume = 1337;
 	db.remove(se);
+	db.createTable!Data();
 }
