@@ -324,9 +324,10 @@ private string genCreateTableStatement(T)() {
 		ret ~= sqliteTypeNameFromType!(T)(it);
 	}
 	//ret ~= sqliteTypeNameFromType!(T)(member[0]);
-	ret ~= "createTableStmt = createTableStmt[0 .. $-1] ~ \" Primary Key(";
+	ret ~= "createTableStmt = createTableStmt[0 .. $-1] ~ \", PRIMARY KEY(";
 	foreach(key; keys) {
-		ret ~= key ~ ",";
+		ret ~= tableNameOfKey(member, key) ~ ",";
+		//ret ~= key ~ ",";
 	}
 	ret = ret[0 .. $-1] ~ "));\";";
 	return ret;
@@ -391,10 +392,10 @@ public:
 		mixin(genRangeItemFill!T());
 	}
 
-	this(string dbn) { 
+	this(string dbn, int openType = SQLITE_OPEN_READWRITE) { 
 		this.dbName = dbn;
 		int errCode = sqlite3_open_v2(toStringz(dbName), &db, 
-			SQLITE_OPEN_READWRITE, null
+			openType, null
 		);
 		if(errCode != SQLITE_OK) {
 			auto errmsg = sqlite3_errmsg(db);
@@ -608,5 +609,7 @@ void main() {
 	se.low = 518.0;
 	se.volume = 1337;
 	db.remove(se);
-	db.createTable!Data();
+
+	auto oDb = Sqlite("otherDb.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+	oDb.createTable!Data();
 }
