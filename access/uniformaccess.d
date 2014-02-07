@@ -333,7 +333,7 @@ private string genCreateTableStatement(T)() {
 	return ret;
 }
 
-pragma(msg, genCreateTableStatement!Data());
+//pragma(msg, genCreateTableStatement!Data());
 
 // Sqlite object
 
@@ -594,7 +594,7 @@ public:
 
 void main() {
 	auto db = Sqlite("googleTable2.db");
-	db.createTable!Data();
+	/+db.createTable!Data();
 	//auto ran = db.select!StockEntry("Symbol = \"AAPL\"");
 	auto ran = db.select!StockEntry();
 	/*foreach(it; filter!(a => a.date > 1377892860 && a.open > 511.0)(ran)) {
@@ -611,5 +611,5 @@ void main() {
 	db.remove(se);
 
 	auto oDb = Sqlite("otherDb.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
-	oDb.createTable!Data();
+	oDb.createTable!Data();+/
 }
