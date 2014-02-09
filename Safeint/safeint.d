@@ -4,6 +4,85 @@ import std.functional : binaryFun;
 import std.math : abs;
 import std.stdio;
 
+public bool isSafeOp(S,R, string op)(S s, R r) @safe pure nothrow {
+	enum unsigned = isUnsigned!S;
+
+	static if(op == "+") {
+		static if(unsigned) {
+		} else {
+		}
+	} else static if(op == "-") {
+	} else static if(op == "/" || op == "%") {
+		return r != 0;
+	} else static if(op == "*") {
+		return s > S.max / r;
+	} else {
+		return false;
+	}
+	assert(false);
+}
+
+public bool divIsSafe(T,S)(T t, S s) @safe pure nothrow {
+	return s != 0;
+}
+
+alias divIsSafe modIsSafe;
+
+unittest {
+	assert(!divIsSafe!(int,long)(1,0));
+	assert(divIsSafe!(int,long)(0,1));
+
+	assert(!modIsSafe!(int,long)(1,0));
+	assert(modIsSafe!(int,long)(0,1));
+}
+
+public bool mulIsSafe(T,S)(T t, S s) @safe pure nothrow {
+	return s < T.max / t;
+}
+
+unittest {
+	assert(mulIsSafe!(char,char)(1,127));
+	assert(!mulIsSafe!(char,char)(2,127));
+	assert(!mulIsSafe!(char,char)(2,68));
+	assert(!mulIsSafe!(char,char)(4,127));
+}
+
+public bool addIsSafe(T,S)(T t, S s) @safe pure nothrow {
+	enum tUnsigned = isUnsigned!T;
+	enum sUnsigned = isUnsigned!S;
+
+	static if(tUnsigned) {
+		static if(sUnsigned) { // unsigned unsigned
+			return (T.max - t) >= s;
+		} else { // unsigned signed
+			if(s <= 0) {
+				return t < abs(s);
+			} else {
+				return (T.max - t) >= s;
+			}
+		}
+	} else {
+		static if(sUnsigned) { // signed unsigned
+			return (T.max - t) >= s;
+		} else { // signed signed
+			if(t >= 0) { 
+				if(s >= 0) { // positiv positiv 
+					return (T.max - t) >= s;
+				} else { // positiv negativ
+					return true;
+				}
+			} else {
+				if(s >= 0) { // negativ positiv
+					return true;
+				} else { // negativ negativ
+					return T.min - t > s;
+				}
+			}
+		}
+	}
+	assert(false);
+}
+
 struct Safe(T) {
 	// Construction
 	static opCall(S)(S value) @safe pure {
@@ -85,35 +164,6 @@ struct Safe(T) {
 		}
 
 		return this;
-	}
-
-	static bool isSafeOp(S,R, string op)(S s, R r) 
-			@safe pure nothrow {
-		enum unsigned = isUnsigned!S;
-
-		static if(op == "+") {
-			if(r >= 0) {
-				S maxMs = S.max - s - unsigned;
-				if(maxMs >= r) {
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				static if(unsigned) {
-					return s > r;
-				} else {
-				}
-			}
-		} else static if(op == "-") {
-		} else static if(op == "/" || op == "%") {
-			return r != 0;
-		} else static if(op == "*") {
-			return s > S.max / r;
-		} else {
-			return false;
-		}
-		assert(false);
 	}
 
 	Safe!T opBinary(string op, S)(const S s) @safe pure nothrow 
