@@ -1,3 +1,5 @@
+module uniformaccess;
+
 import std.stdio;
 import std.algorithm;
 import std.exception;
@@ -45,7 +47,7 @@ string[] extractPrimaryKeyNames(T)() {
 
 string extractPrimaryKeyNamesImpl(T,string m)() {
 	string ret;
-	foreach(it; __traits(getAttributes, mixin(T.stringof ~ "." ~ m))) {
+	foreach(it; __traits(getAttributes, mixin(getName!T ~ "." ~ m))) {
 		ret ~= it ~ " ";
 	}
 	return ret;
@@ -56,6 +58,29 @@ unittest {
 }
 
 /// Get Tabelname the Aggregation maps
+
+string getName(T)() @safe {
+	enum fully = fullyQualifiedName!T;
+	//int l = -1;
+	//foreach_reverse(idx, dchar it; fully) {
+	//	if(it == '.') {
+	//		l = to!int(idx);
+	//		break;
+	//	}
+	//}
+	//if(l != -1) {
+	//	return fully[l+1 .. $];
+	//} else {
+		return fully;
+	//}
+}
+
+unittest {
+	import std.container : Array;
+
+	static assert(getName!Data == "uniformaccess.Data");
+	//static assert(getName!Array == "std.container.Array");
+}
 
 string getTableNameOfAggregation(T)() {
 	string ret;
@@ -70,13 +95,15 @@ string getTableNameOfAggregation(T)() {
 	if(tmp.length == 3 && tmp[0] == "UA") {
 		return tmp[1];
 	} else {
-		return T.stringof;
+		return getName!T;
 	}
 }
 
 unittest {
-	static assert(getTableNameOfAggregation!Data() == "Data");
-	static assert(getTableNameOfAggregation!Datas() == "SomeOtherTableName");
+	static assert(getTableNameOfAggregation!Data() == "uniformaccess.Data",
+		getTableNameOfAggregation!Data);
+	static assert(getTableNameOfAggregation!Datas() == "SomeOtherTableName",
+		getTableNameOfAggregation!Datas);
 }
 
 /// Get names of column the data member map
@@ -103,7 +130,7 @@ string[2][] extractMemberNames(T)() {
 
 string extractMemberNamesImpl(T,string m)() {
 	string ret;
-	foreach(it; __traits(getAttributes, mixin(T.stringof ~ "." ~ m))) {
+	foreach(it; __traits(getAttributes, mixin(fullyQualifiedName!T ~ "." ~ m))) {
 		ret ~= it ~ " ";
 	}
 	return ret;
@@ -580,36 +607,4 @@ public:
 		}
 		return str;
 	}
-}
-
-@("UA", "stocks") struct StockEntry {
-	@("UA", "Symbol", "Primary_Key") 	string sym;
-	@("UA", "Date", "Primary_Key") 		long date;
-	@("UA", "Open") 					real open;
-	@("UA", "Close") 					real close;
-	@("UA", "High") 					real high;
-	@("UA", "Low") 						real low;
-	@("UA", "Volume") 					long volume;
-}
-
-void main() {
-	auto db = Sqlite("googleTable2.db");
-	/+db.createTable!Data();
-	//auto ran = db.select!StockEntry("Symbol = \"AAPL\"");
-	auto ran = db.select!StockEntry();
-	/*foreach(it; filter!(a => a.date > 1377892860 && a.open > 511.0)(ran)) {
-		writeln(it);
-	}*/
-	StockEntry se;
-	se.sym ="AAPL";
-	se.date = 1377892880;
-	se.open = 512.0;
-	se.close = 514.0;
-	se.high = 516.0;
-	se.low = 518.0;
-	se.volume = 1337;
-	db.remove(se);
-
-	auto oDb = Sqlite("otherDb.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
-	oDb.createTable!Data();+/
 }
